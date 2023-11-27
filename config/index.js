@@ -13,6 +13,9 @@ const config = {
   apiBaseUrl: process.env.API_BASE_URL,
   artifactsBucket: process.env.ARTIFACTS_BUCKET,
   buildCdnUrl: process.env.BUILD_CDN_URL,
+  puppeteer: {
+    userDataDir: process.env.USER_DATA_DIR ?? "",
+  },
   appstore: {
     apiBaseUrl: "https://api.appstoreconnect.apple.com/v1",
     bundleCapabilities: [

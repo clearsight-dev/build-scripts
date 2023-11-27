@@ -6,6 +6,7 @@ import { fileURLToPath } from "url";
 
 export async function downloadServiceJSON(projectId) {
   try {
+    console.log("Downloading Service Account Key File...");
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
     const downloadPath = path.join(__dirname, "servicebase-file");

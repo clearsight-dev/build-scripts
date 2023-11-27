@@ -1,6 +1,7 @@
 import { execSync } from "child_process";
 import { moveFile } from "../index.js";
 import chalk from "chalk";
+import { projectStage } from "../../firebase.js";
 export const logError = (message) => {
   projectStage.success = false;
   projectStage.Error_Message = message;
