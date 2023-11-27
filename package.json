@@ -1,0 +1,31 @@
+{
+  "name": "android-build-script",
+  "version": "1.0.0",
+  "description": "",
+  "main": "android_build_script.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "type": "module",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.456.0",
+    "@aws-sdk/lib-storage": "^3.456.0",
+    "axios": "^1.6.2",
+    "chalk": "^5.3.0",
+    "config": "^3.3.9",
+    "dotenv": "^16.3.1",
+    "fs": "^0.0.1-security",
+    "jsonwebtoken": "^9.0.2",
+    "lodash": "^4.17.21",
+    "moment": "^2.29.4",
+    "path": "^0.12.7",
+    "puppeteer": "^21.3.8",
+    "puppeteer-core": "^21.3.4",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "shelljs": "^0.8.5"
+  }
+}
