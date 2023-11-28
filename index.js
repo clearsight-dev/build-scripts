@@ -7,9 +7,11 @@ import { downloadFromS3, uploadToS3 } from "./utils/s3/index.js";
 import axios from "axios";
 import path from "path";
 import moment from "moment";
+import { sendSlackAlerts } from "./utils/slack/index.js";
 
 async function main() {
-  /* THIS SCRIPT DOES THE FOLLOWING:
+  try {
+    /* THIS SCRIPT DOES THE FOLLOWING:
 
   1. GET BUILD_CONFIG from env and parse it as JSON
   2. Download Assets from S3,(build_config contains s3 paths for respective asset)
@@ -22,124 +24,135 @@ async function main() {
 
 */
 
-  const platform = process.env.PLATFORM;
-  const buildConfigString = process.env.BUILD_CONFIG;
+    var platform = process.env.PLATFORM;
+    const buildConfigString = process.env.BUILD_CONFIG;
 
-  if (!buildConfigString || buildConfigString.trim() === "") {
-    throw new Error("NO BUILD CONFIG PASSED IN ENV");
-  }
+    if (!buildConfigString || buildConfigString.trim() === "") {
+      throw new Error("NO BUILD CONFIG PASSED IN ENV");
+    }
 
-  // Parse the trimmed JSON string
+    // Parse the trimmed JSON string
 
-  const buildConfig =
-    platform === "android"
-      ? JSON.parse(decodeURIComponent(buildConfigString))
-      : JSON.parse(buildConfigString);
-  console.log(buildConfig);
+    const buildConfig =
+      platform === "android"
+        ? JSON.parse(decodeURIComponent(buildConfigString))
+        : JSON.parse(buildConfigString);
+    console.log(buildConfig);
 
-  const currentWrkDir = path.resolve(process.cwd());
+    const currentWrkDir = path.resolve(process.cwd());
 
-  const appId = _.get(buildConfig, "app_id", "");
-  const build_android = _.get(buildConfig, "build_android", false);
-  const build_ios = _.get(buildConfig, "build_ios", false);
-  const appName = _.get(buildConfig, "app_name", null);
-  const bundleName = _.get(buildConfig, "ios.bundle_id", null);
-
-  console.log("Generating Bundle Identifiers....");
-
-  if (build_ios) {
-    console.log("Generating Bundle Identifiers....");
-    const { createBundleIdentifier } = await import(
-      "./utils/ios/createBundleId.js"
+    var appId = _.get(buildConfig, "app_id", "");
+    var build_android = _.get(buildConfig, "build_android", false);
+    var build_ios = _.get(buildConfig, "build_ios", false);
+    var appName = _.get(buildConfig, "app_name", null);
+    var bundleName = _.get(buildConfig, "ios.bundle_id", null);
+    var version = _.get(
+      buildConfig,
+      `${platform.toLowerCase()}.version_number`,
+      null
     );
-    const { createBundleCapabilities } = await import(
-      "./utils/ios/createBundleCapabilities.js"
-    );
-    const appBundleId = await createBundleIdentifier(appName, bundleName);
-    const imageNotificationBundleId = await createBundleIdentifier(
-      `${appName} Image Notification`,
-      `${bundleName}.ImageNotification`
+    var semver = _.get(
+      buildConfig,
+      `${platform.toLowerCase()}.version_semver`,
+      null
     );
 
-    if (appBundleId) await createBundleCapabilities(appBundleId);
-
-    if (imageNotificationBundleId)
-      await createBundleCapabilities(imageNotificationBundleId);
-  }
-
-  console.log("Downloading Build Assets From S3...");
-
-  const requiredFiles = ["icon_path", "splash_path", "service_file_path"];
-
-  const fileNamesMap = {
-    icon_path: "icon.png",
-    splash_path: "splash.png",
-  };
-
-  if (build_android) {
-    requiredFiles.push("store_file_path");
-    fileNamesMap["store_file_path"] = "androidStoreFile.jks";
-    fileNamesMap["service_file_path"] = "google-services.json";
-  }
-
-  if (build_ios) {
-    fileNamesMap["service_file_path"] = "GoogleService-Info.plist";
-  }
-
-  await Promise.all(
-    requiredFiles.map(async (key) => {
-      const downloadPath = path.join(
-        currentWrkDir,
-        "assets",
-        fileNamesMap[key]
+    if (build_ios) {
+      console.log("Generating Bundle Identifiers....");
+      const { createBundleIdentifier } = await import(
+        "./utils/ios/createBundleId.js"
+      );
+      const { createBundleCapabilities } = await import(
+        "./utils/ios/createBundleCapabilities.js"
+      );
+      const appBundleId = await createBundleIdentifier(appName, bundleName);
+      const imageNotificationBundleId = await createBundleIdentifier(
+        `${appName} Image Notification`,
+        `${bundleName}.ImageNotification`
       );
 
-      // Download the files from S3
+      if (appBundleId) await createBundleCapabilities(appBundleId);
 
-      await downloadFromS3(
-        _.get(buildConfig, [platform, key]),
-        downloadPath,
-        config.buildAssetsBucket
-      );
+      if (imageNotificationBundleId)
+        await createBundleCapabilities(imageNotificationBundleId);
+    }
 
-      // Replace Uploader Keys With Downloaded File Paths in distribution.config.json
+    console.log("Downloading Build Assets From S3...");
 
-      _.set(buildConfig, [platform, key], path.resolve(downloadPath));
-    })
-  );
+    const requiredFiles = ["icon_path", "splash_path", "service_file_path"];
 
-  // Convert buildConfig to JSON string
-  const buildConfigJSON = JSON.stringify(buildConfig, null, 2);
+    const fileNamesMap = {
+      icon_path: "icon.png",
+      splash_path: "splash.png",
+    };
 
-  // Write the build config to disk as distribution.config.json
+    if (build_android) {
+      requiredFiles.push("store_file_path");
+      fileNamesMap["store_file_path"] = "androidStoreFile.jks";
+      fileNamesMap["service_file_path"] = "google-services.json";
+    }
 
-  fs.writeFileSync(
-    path.join(currentWrkDir, "assets", "distribution.config.json"),
-    buildConfigJSON,
-    "utf-8"
-  );
+    if (build_ios) {
+      fileNamesMap["service_file_path"] = "GoogleService-Info.plist";
+    }
 
-  const projectPath = path.join(currentWrkDir, "..", "ReactNativeTSProjeect");
+    await Promise.all(
+      requiredFiles.map(async (key) => {
+        const downloadPath = path.join(
+          currentWrkDir,
+          "assets",
+          fileNamesMap[key]
+        );
 
-  const sourceFilePath = path.join(
-    currentWrkDir,
-    "assets",
-    "distribution.config.json"
-  );
+        // Download the files from S3
 
-  const destinationFilePath = path.join(projectPath, "devops");
-  shell.cd(destinationFilePath);
-  shell.cp("-f", sourceFilePath, destinationFilePath);
+        await downloadFromS3(
+          _.get(buildConfig, [platform, key]),
+          downloadPath,
+          config.buildAssetsBucket
+        );
 
-  console.log(`Generating Build for ${platform}`);
+        // Replace Uploader Keys With Downloaded File Paths in distribution.config.json
 
-  try {
-    shell.exec("./distribution.build.sh");
+        _.set(buildConfig, [platform, key], path.resolve(downloadPath));
+      })
+    );
+
+    // Convert buildConfig to JSON string
+    const buildConfigJSON = JSON.stringify(buildConfig, null, 2);
+
+    // Write the build config to disk as distribution.config.json
+
+    fs.writeFileSync(
+      path.join(currentWrkDir, "assets", "distribution.config.json"),
+      buildConfigJSON,
+      "utf-8"
+    );
+
+    const projectPath = path.join(currentWrkDir, "..", "ReactNativeTSProjeect");
+
+    const sourceFilePath = path.join(
+      currentWrkDir,
+      "assets",
+      "distribution.config.json"
+    );
+
+    const destinationFilePath = path.join(projectPath, "devops");
+    shell.cd(destinationFilePath);
+    shell.cp("-f", sourceFilePath, destinationFilePath);
+
+    console.log(`Generating Build for ${platform}`);
+
+    try {
+      shell.exec("./distribution.build.sh");
+    } catch (err) {
+      console.log(err);
+    }
 
     const buildAssetsPath = path.join(projectPath, "build");
 
     if (!fs.existsSync(buildAssetsPath))
-      throw Error("Android build result not found");
+      throw Error(`${platform} build result not found`);
 
     shell.cd(projectPath);
 
@@ -149,7 +162,7 @@ async function main() {
 
     const currentTime = moment().format("MMMM_Do_YYYY_h_mm_ss").toLowerCase();
 
-    const s3fileName = `${appId}/builds/Android_Build_${currentTime}.zip`;
+    const s3fileName = `${appId}/builds/${platform.toLowerCase()}/${appName}_${currentTime}.zip`;
 
     // UPLOAD THE BUILD ASSETS TO S3
 
@@ -159,17 +172,19 @@ async function main() {
       s3fileName
     );
 
-    console.log(uploaderKey, "Uploader key");
+    console.log(uploaderKey, "Uploader Key for S3 Bucket");
 
     if (uploaderKey) {
-      const artefactUrl = uploaderKey + ".com";
-
-      //!! Remove this
-      const webhook_url = buildConfig.ios.webhook_url.replace(
-        /^https:/,
-        "http:"
+      const artefactUrl = config.buildCdnUrl + "/" + uploaderKey;
+      await sendSlackAlerts(
+        true,
+        appName,
+        platform,
+        version,
+        semver,
+        artefactUrl
       );
-
+      const webhook_url = buildConfig[platform.toLowerCase()].webhook_url;
       await axios.post(webhook_url, {
         success: true,
         artefactUrl,
@@ -177,8 +192,10 @@ async function main() {
     } else {
       throw Error("Web Hook Failed to Apptile Server!!");
     }
+    process.exit(0);
   } catch (err) {
-    console.log("Build Failed !!" + err.message);
+    console.log("Build Failed !!" + err.stack);
+    await sendSlackAlerts(false, appName, platform, version, semver, err.stack);
     process.exit(1);
   }
 }

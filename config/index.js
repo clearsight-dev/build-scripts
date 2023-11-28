@@ -30,6 +30,7 @@ const config = {
       privateKeyPath: process.env.PRIVATE_KEY_PATH,
     },
   },
+  slackWebHook: process.env.SLACK_BUILD_WEBHOOK,
 };
 
 export default config;
