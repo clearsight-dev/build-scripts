@@ -156,7 +156,7 @@ async function main() {
 
     shell.cd(projectPath);
 
-    // ZIP THE BUILD ASSETS DOLDER
+    // ZIP THE BUILD ASSETS FOLDER
 
     shell.exec("zip -r build.zip build/");
 
@@ -175,7 +175,7 @@ async function main() {
     console.log(uploaderKey, "Uploader Key for S3 Bucket");
 
     if (uploaderKey) {
-      const artefactUrl = config.buildCdnUrl + "/" + uploaderKey;
+      const artefactUrl = encodeURI(config.buildCdnUrl + "/" + uploaderKey);
       await sendSlackAlerts(
         true,
         appName,
