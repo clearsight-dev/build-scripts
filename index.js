@@ -1,6 +1,5 @@
 import shell from "shelljs";
 import fs from "fs";
-import dotenv from "dotenv";
 import config from "./config/index.js";
 import _ from "lodash";
 import { downloadFromS3, uploadToS3 } from "./utils/s3/index.js";
@@ -11,6 +10,8 @@ import { sendSlackAlerts } from "./utils/slack/index.js";
 
 async function main() {
   try {
+    //TODO: HANDLE MOST COMMON ERRORS WHILE EXECUTING distribution.sh
+
     /* THIS SCRIPT DOES THE FOLLOWING:
 
   1. GET BUILD_CONFIG from env and parse it as JSON
@@ -60,10 +61,10 @@ async function main() {
     if (build_ios) {
       console.log("Generating Bundle Identifiers....");
       const { createBundleIdentifier } = await import(
-        "./utils/ios/createBundleId.js"
+        "./utils/ios/bundleIds.js"
       );
       const { createBundleCapabilities } = await import(
-        "./utils/ios/createBundleCapabilities.js"
+        "./utils/ios/bundleCapabilities.js"
       );
       const appBundleId = await createBundleIdentifier(appName, bundleName);
       const imageNotificationBundleId = await createBundleIdentifier(
@@ -145,6 +146,13 @@ async function main() {
 
     try {
       shell.exec("./distribution.build.sh");
+
+      if (build_ios) {
+        const { createInternalTestFlight } = await import(
+          "./utils/ios/testflight.js"
+        );
+        createInternalTestFlight(bundleName);
+      }
     } catch (err) {
       console.log(err);
     }
@@ -185,10 +193,14 @@ async function main() {
         artefactUrl
       );
       const webhook_url = buildConfig[platform.toLowerCase()].webhook_url;
-      await axios.post(webhook_url, {
-        success: true,
-        artefactUrl,
-      });
+      try {
+        await axios.post(webhook_url, {
+          success: true,
+          artefactUrl,
+        });
+      } catch (err) {
+        console.log(err);
+      }
     } else {
       throw Error("Web Hook Failed to Apptile Server!!");
     }

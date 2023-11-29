@@ -115,6 +115,16 @@ try {
   };
 
   try {
+    await enableAnalyticsPipeline(projectId, projectName);
+  } catch (err) {
+    // TODO: Add Log to AnaLytics
+    console.log("Enabling Analytics Failed!! Enable it Manually!" + err);
+    postWebhookData["warnings"].push(
+      "Enabling Analytics Failed!! Enable it Manually!"
+    );
+  }
+
+  try {
     await downloadServiceJSON(projectId);
     const serviceAccountUUID = randomUUID();
     const serviceFileUploaderKey = await uploadToS3(
@@ -133,16 +143,6 @@ try {
     console.log("Generating Service Json Failed. Download it Manually!" + err);
     postWebhookData["warnings"].push(
       "Generating Service Account Key Failed. Download it Manually"
-    );
-  }
-
-  try {
-    await enableAnalyticsPipeline(projectId, projectName);
-  } catch (err) {
-    // TODO: Add Log to AnaLytics
-    console.log("Enabling Analytics Failed!! Enable it Manually!" + err);
-    postWebhookData["warnings"].push(
-      "Enabling Analytics Failed!! Enable it Manually!"
     );
   }
 } catch (error) {

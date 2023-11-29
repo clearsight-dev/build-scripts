@@ -1,6 +1,5 @@
 import fs from "fs";
 import jwt from "jsonwebtoken";
-import chalk from "chalk";
 import config from "../../config/index.js";
 
 export function generateJWT() {
@@ -34,11 +33,13 @@ export function generateJWT() {
 }
 
 const jwtToken = generateJWT();
-
+// console.log(jwtToken);
 const AuthHeader = {
   headers: {
     Authorization: `Bearer ${jwtToken}`,
   },
 };
+
+// generateJWT();
 
 export default AuthHeader;

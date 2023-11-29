@@ -12,7 +12,7 @@ export async function downloadServiceJSON(projectId) {
     const downloadPath = path.join(__dirname, "servicebase-file");
     const configFolderPath = path.join(__dirname, "../../../", "assets");
 
-    let [browser, page] = await launchBrowser();
+    var [browser, page] = await launchBrowser();
 
     await page.goto(
       `https://console.cloud.google.com/iam-admin/serviceaccounts?hl=en&project=${projectId}`
@@ -89,8 +89,9 @@ export async function downloadServiceJSON(projectId) {
       await browser.close();
     }
   } catch (error) {
+    await page.screenshot({ path: `${projectId}_crashReport.png` });
     throw new Error("Error while downloading Service Json File: \n" + error);
   }
 }
 
-// downloadServiceJSON("chaos-collection-9360");
+// downloadServiceJSON("jon-blanco-6821");

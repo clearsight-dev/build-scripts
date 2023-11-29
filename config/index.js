@@ -29,6 +29,17 @@ const config = {
       issuerId: process.env.APPSTORE_ISSUER_ID,
       privateKeyPath: process.env.PRIVATE_KEY_PATH,
     },
+    //contains uuid all the testers that are registered on appstoreconnect.com
+    testers: [
+      "80f2c633-74d5-420b-83e1-f77fc99af839", //Archit
+      "80faa659-f894-45bd-ab14-4e0f7a9e4df8", //Saif Sadiq
+      "81214a50-fcee-454e-b0f1-145693bb3483", //Rohith
+      "813d6fb2-876f-4767-84f9-86329311426c", //Samyam
+      "81c48205-4155-41a9-bf48-dcab007e109e", //Nikhil Yadav
+      "81c90c67-91bc-49b6-a75b-80a58c8e9236", //launch@apptile.com
+      "82b7d8b8-9646-4a94-a574-c66040fe7eb8", //Vishal
+      "84964797-0e05-4ee1-84b4-5fdb192a442f", //Ankit
+    ],
   },
   slackWebHook: process.env.SLACK_BUILD_WEBHOOK,
 };

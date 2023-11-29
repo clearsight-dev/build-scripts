@@ -1,5 +1,5 @@
 import config from "../../config/index.js";
-import AuthHeader from "./generate-jwt.js";
+import AuthHeader from "./auth.js";
 import axios from "axios";
 import chalk from "chalk";
 

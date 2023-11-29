@@ -1,4 +1,4 @@
-import AuthHeader from "./generate-jwt.js";
+import AuthHeader from "./auth.js";
 import config from "../../config/index.js";
 import chalk from "chalk";
 import axios from "axios";
@@ -37,12 +37,16 @@ export async function createBundleIdentifier(appName, bundleName) {
             detail.includes(`Identifier '${bundleName}' is not available`)
           ) {
             const existingBundleId = await getBundleIdByBundleName(bundleName);
-            if (!existingBundleId) {
-              throw new Error(`${bundleName} cannot be used as an Identifier`);
-            }
+            console.log(existingBundleId);
+            //!! this is commented out because this is a paginated api getBundleIDBYNAME and doesnt give all the existing bundleId's so this will fail
+            // if (!existingBundleId) {
+            //   throw new Error(`${bundleName} cannot be used as an Identifier`);
+            // }
             console.log(
               chalk.yellow(
-                `Bundle ID already exists with ID ${existingBundleId}. Skipping creation.`
+                `Bundle ID already exists ${
+                  existingBundleId ? `with ID ${existingBundleId}` : ""
+                }. Skipping creation.`
               )
             );
             // return existingBundleId;
