@@ -1,4 +1,4 @@
-// Paste this in the Pipeline Script in Android Build Pipeline
+// Paste this in the Pipeline Script in Jenkins Android Build Pipeline
 
 // THIS is triggered in AWS Codebuild and you need to install aws codebuild plugin inorder for this to work
 
