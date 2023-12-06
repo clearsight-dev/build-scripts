@@ -35,9 +35,9 @@ export const useFirebaseProject = (projectId) => {
 
 export const createFirebaseApp = (platform, appName, bundleID) => {
   try {
-    const createAndroidApp = `firebase apps:create ANDROID "${appName}" -a ${bundleID} --debug`;
+    const createAndroidApp = `firebase apps:create ANDROID "${appName}" -a "${bundleID}" --debug`;
 
-    const createIOSApp = `firebase apps:create IOS "${appName}" -b ${bundleID} -s "" --debug`;
+    const createIOSApp = `firebase apps:create IOS "${appName}" -b "${bundleID}" -s "" --debug`;
 
     const createAppCommand =
       platform === "ANDROID" ? createAndroidApp : createIOSApp;

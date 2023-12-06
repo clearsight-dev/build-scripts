@@ -22,11 +22,18 @@ import { dirname } from "path";
 import path from "path";
 import moment from "moment";
 import { downloadServiceJSON } from "./utils/firebase/puppeteer/downloadServiceBaseFile.js";
+import { delay } from "./utils/index.js";
+import {
+  sendFirebaseFailureAlert,
+  sendFirebaseSuccessAlert,
+  sendSlackAlerts,
+} from "./utils/slack/index.js";
 
 const appId = process.env.APP_ID;
 const appName = process.env.APP_NAME;
 const bundleID = process.env.BUNDLE_ID;
 let existingProjectId = process.env.EXISTING_PROJECT_ID;
+
 const usingApptileAccount =
   process.env.usingApptileAccount === "true" ? true : false;
 
@@ -41,11 +48,13 @@ export let projectStage = {
   stage: "Beginning Firebase",
   success: true,
   Error_Message: "",
+  Error_Detailed: "",
 };
 
 let postWebhookData = { success: true, warnings: [], usingApptileAccount };
 
 try {
+  var screenshotFileKey;
   var projectId = existingProjectId ?? generateProjectId(appName);
   console.log(projectId);
 
@@ -54,7 +63,6 @@ try {
   const result = execute(
     `firebase projects:list | grep "${projectId}" || true`
   );
-  console.log(result);
 
   if (existingProjectId && result.trim() === "") {
     throw new Error(
@@ -80,6 +88,12 @@ try {
   createFirebaseApp("ANDROID", appName, bundleID);
 
   createFirebaseApp("IOS", appName, bundleID);
+
+  console.log(
+    "Waiting Period of 10secs ... for created config files to showup on firebase......"
+  );
+
+  await delay(10000);
 
   downloadFirebaseConfig("ANDROID");
 
@@ -140,14 +154,27 @@ try {
       uploaderKey: serviceFileUploaderKey,
     };
   } catch (err) {
-    console.log("Generating Service Json Failed. Download it Manually!" + err);
+    console.log(err.errorMessage);
     postWebhookData["warnings"].push(
       "Generating Service Account Key Failed. Download it Manually"
+    );
+    const crashScreenshotName = `${appId}/puppeteerScreenshots/${moment()
+      .format("MMMM_Do_YYYY_h_mm_ss")
+      .toLowerCase()}.png`;
+
+    screenshotFileKey = await uploadToS3(
+      err.errorScreenshotPath,
+      config.buildAssetsBucket,
+      crashScreenshotName
     );
   }
 } catch (error) {
   const errorMessage =
-    (error.stdout ?? "") + (error.stderr ?? "") + (error.message ?? "");
+    (error.stdout ?? "") +
+    (error.stderr ?? "") +
+    (error.message ?? "") +
+    (error.stack ?? "");
+  projectStage.Error_Detailed = errorMessage;
 
   const logFileName = `${appId}/logs/firebase/${moment()
     .format("MMMM_Do_YYYY_h_mm_ss")
@@ -222,6 +249,19 @@ await axios.post(
   `${config.apiBaseUrl}/build-manager/webhook/firebase/${appId}`,
   postWebhookData
 );
+const alertMessage = postWebhookData["success"]
+  ? sendFirebaseSuccessAlert(
+      appName,
+      projectId,
+      postWebhookData["warnings"],
+      screenshotFileKey
+    )
+  : sendFirebaseFailureAlert(
+      appName,
+      projectStage.Error_Message + "   " + projectStage.Error_Detailed
+    );
+
+await sendSlackAlerts(alertMessage);
 
 if (projectStage.Error_Message) process.exit(1);
 else process.exit(0);

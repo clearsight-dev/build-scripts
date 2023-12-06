@@ -10,7 +10,7 @@ export async function downloadServiceJSON(projectId) {
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
     const downloadPath = path.join(__dirname, "servicebase-file");
-    const configFolderPath = path.join(__dirname, "../../../", "assets");
+    var configFolderPath = path.join(__dirname, "../../../", "assets");
 
     var [browser, page] = await launchBrowser();
 
@@ -89,9 +89,15 @@ export async function downloadServiceJSON(projectId) {
       await browser.close();
     }
   } catch (error) {
-    await page.screenshot({ path: `${projectId}_crashReport.png` });
-    throw new Error("Error while downloading Service Json File: \n" + error);
+    const crashScreenshotPath = path.join(
+      configFolderPath,
+      `${projectId}_serviceAccountFile_crashReport.png`
+    );
+    await page.screenshot({ path: crashScreenshotPath });
+
+    throw {
+      errorMessage: "Error while downloading Service Json File: \n" + error,
+      errorScreenshotPath: crashScreenshotPath,
+    };
   }
 }
-
-// downloadServiceJSON("jon-blanco-6821");

@@ -39,7 +39,5 @@ const AuthHeader = {
     Authorization: `Bearer ${jwtToken}`,
   },
 };
-
 // generateJWT();
-
 export default AuthHeader;

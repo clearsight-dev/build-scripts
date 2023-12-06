@@ -6,8 +6,11 @@ import { downloadFromS3, uploadToS3 } from "./utils/s3/index.js";
 import axios from "axios";
 import path from "path";
 import moment from "moment";
-import { sendSlackAlerts } from "./utils/slack/index.js";
-
+import {
+  sendSlackAlerts,
+  generateBuildFailureAlert,
+  generateBuildSuccessAlert,
+} from "./utils/slack/index.js";
 async function main() {
   try {
     //TODO: HANDLE MOST COMMON ERRORS WHILE EXECUTING distribution.sh
@@ -144,23 +147,35 @@ async function main() {
 
     console.log(`Generating Build for ${platform}`);
 
-    try {
-      shell.exec("./distribution.build.sh");
+    const result = shell.exec("./distribution.build.sh");
 
-      if (build_ios) {
-        const { createInternalTestFlight } = await import(
-          "./utils/ios/testflight.js"
+    //!! Handle Most Common Android Errors
+    //!! Upload to S3 Logs for build system
+    //!! Try this in silent false
+
+    console.log(result.code, "CODE");
+    if (result.code !== 0) {
+      if (result.stdout.includes("Error fetching app info"))
+        throw new Error(
+          "App needs to be Published atleast once inorder to build!"
         );
-        createInternalTestFlight(bundleName);
-      }
-    } catch (err) {
-      console.log(err);
+    }
+
+    if (result.code === 0) {
+      if (result.stderr.includes("ARCHIVE FAILED")) {
+        throw new Error(
+          "Failed Because .entitlements files containing Appgroups .Build System Doesnt Support Appgroups for now! Remove that and try again!"
+        );
+      } else
+        throw new Error(
+          "Unhandled Error! Please Check the logs and try again!"
+        );
     }
 
     const buildAssetsPath = path.join(projectPath, "build");
 
     if (!fs.existsSync(buildAssetsPath))
-      throw Error(`${platform} build result not found`);
+      throw Error(`${platform} Build Failed. Check Logs on Jenkins!`);
 
     shell.cd(projectPath);
 
@@ -184,14 +199,14 @@ async function main() {
 
     if (uploaderKey) {
       const artefactUrl = encodeURI(config.buildCdnUrl + "/" + uploaderKey);
-      await sendSlackAlerts(
-        true,
+      const alertMessage = generateBuildSuccessAlert(
         appName,
         platform,
         version,
         semver,
         artefactUrl
       );
+      await sendSlackAlerts(alertMessage);
       const webhook_url = buildConfig[platform.toLowerCase()].webhook_url;
       try {
         await axios.post(webhook_url, {
@@ -206,8 +221,17 @@ async function main() {
     }
     process.exit(0);
   } catch (err) {
-    console.log("Build Failed !!" + err.stack);
-    await sendSlackAlerts(false, appName, platform, version, semver, err.stack);
+    console.log("Build Failed !!" + err.stack ?? "");
+
+    const alertMessage = generateBuildFailureAlert(
+      appName,
+      platform,
+      version,
+      semver,
+      err.stack
+    );
+    await sendSlackAlerts(alertMessage);
+
     process.exit(1);
   }
 }
