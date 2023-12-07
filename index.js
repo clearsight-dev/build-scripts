@@ -213,14 +213,10 @@ async function main() {
       );
       await sendSlackAlerts(alertMessage);
       var webhook_url = buildConfig[platform.toLowerCase()].webhook_url;
-      try {
-        await axios.post(webhook_url, {
-          success: true,
-          artefactUrl,
-        });
-      } catch (err) {
-        console.log(err);
-      }
+      await axios.post(webhook_url, {
+        success: true,
+        artefactUrl,
+      });
     } else {
       throw Error("Web Hook Failed to Apptile Server!!");
     }
