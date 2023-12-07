@@ -61,7 +61,7 @@ async function main() {
       null
     );
 
-    if (build_ios) {
+    if (build_ios && semver == "1.0.0" && version == "1") {
       console.log("Generating Bundle Identifiers....");
       const { createBundleIdentifier } = await import(
         "./utils/ios/bundleIds.js"
@@ -149,9 +149,9 @@ async function main() {
 
     const result = shell.exec("./distribution.build.sh");
 
-    //!! Handle Most Common Android Errors
-    //!! Upload to S3 Logs for build system
-    //!! Try this in silent false
+    // //!! Handle Most Common Android Errors
+    // //!! Upload to S3 Logs for build system
+    // //!! Try this in silent false
 
     console.log(result.code, "CODE");
     if (result.code !== 0) {
@@ -166,10 +166,14 @@ async function main() {
         throw new Error(
           "Failed Because .entitlements files containing Appgroups .Build System Doesnt Support Appgroups for now! Remove that and try again!"
         );
-      } else
-        throw new Error(
-          "Unhandled Error! Please Check the logs and try again!"
-        );
+      }
+    }
+
+    if (build_ios && semver == "1.0.0" && version == "1") {
+      const { createInternalTestFlight } = await import(
+        "./utils/ios/testflight.js"
+      );
+      createInternalTestFlight(bundleName);
     }
 
     const buildAssetsPath = path.join(projectPath, "build");
@@ -199,6 +203,7 @@ async function main() {
 
     if (uploaderKey) {
       const artefactUrl = encodeURI(config.buildCdnUrl + "/" + uploaderKey);
+      console.log(artefactUrl);
       const alertMessage = generateBuildSuccessAlert(
         appName,
         platform,
@@ -207,7 +212,7 @@ async function main() {
         artefactUrl
       );
       await sendSlackAlerts(alertMessage);
-      const webhook_url = buildConfig[platform.toLowerCase()].webhook_url;
+      var webhook_url = buildConfig[platform.toLowerCase()].webhook_url;
       try {
         await axios.post(webhook_url, {
           success: true,
@@ -222,7 +227,6 @@ async function main() {
     process.exit(0);
   } catch (err) {
     console.log("Build Failed !!" + err.stack ?? "");
-
     const alertMessage = generateBuildFailureAlert(
       appName,
       platform,
@@ -231,6 +235,10 @@ async function main() {
       err.stack
     );
     await sendSlackAlerts(alertMessage);
+
+    await axios.post(webhook_url, {
+      success: false,
+    });
 
     process.exit(1);
   }
