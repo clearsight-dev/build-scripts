@@ -56,6 +56,7 @@ let postWebhookData = { success: true, warnings: [], usingApptileAccount };
 try {
   var screenshotFileKey;
   var projectId = existingProjectId ?? generateProjectId(appName);
+
   console.log(projectId);
 
   console.log(`Checking If Project ${projectId} already exists ....`);
@@ -80,7 +81,7 @@ try {
   } else {
     console.log(`Skipping Project Id ${projectId} creation ...`);
   }
-
+  postWebhookData["projectId"] = projectId;
   projectStage.stage = "Using A Project";
 
   useFirebaseProject(projectId);
@@ -235,7 +236,6 @@ try {
   postWebhookData = {
     ...postWebhookData,
     success: false,
-    projectId,
     errors: {
       message: projectStage.Error_Message,
       logFileKey,
