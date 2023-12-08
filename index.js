@@ -50,6 +50,8 @@ async function main() {
     var build_ios = _.get(buildConfig, "build_ios", false);
     var appName = _.get(buildConfig, "app_name", null);
     var bundleName = _.get(buildConfig, "ios.bundle_id", null);
+    var webhook_url = _.get(buildConfig, platform.toLowerCase(), null);
+
     var version = _.get(
       buildConfig,
       `${platform.toLowerCase()}.version_number`,
@@ -212,7 +214,7 @@ async function main() {
         artefactUrl
       );
       await sendSlackAlerts(alertMessage);
-      var webhook_url = buildConfig[platform.toLowerCase()].webhook_url;
+
       await axios.post(webhook_url, {
         success: true,
         artefactUrl,
