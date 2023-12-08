@@ -50,7 +50,11 @@ async function main() {
     var build_ios = _.get(buildConfig, "build_ios", false);
     var appName = _.get(buildConfig, "app_name", null);
     var bundleName = _.get(buildConfig, "ios.bundle_id", null);
-    var webhook_url = _.get(buildConfig, platform.toLowerCase(), null);
+    var webhook_url = _.get(
+      buildConfig,
+      `${platform.toLowerCase()}.webhook_url`,
+      null
+    );
 
     var version = _.get(
       buildConfig,
