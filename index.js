@@ -11,6 +11,7 @@ import {
   generateBuildFailureAlert,
   generateBuildSuccessAlert,
 } from "./utils/slack/index.js";
+import { submitBuildForExternalTesting } from "./utils/ios/testflight.js";
 async function main() {
   try {
     //TODO: HANDLE MOST COMMON ERRORS WHILE EXECUTING distribution.sh
@@ -30,6 +31,9 @@ async function main() {
 
     var platform = process.env.PLATFORM;
     const buildConfigString = process.env.BUILD_CONFIG;
+
+    const projectPath = path.join(currentWrkDir, "..", "ReactNativeTSProjeect");
+    const destinationFilePath = path.join(projectPath, "devops");
 
     if (!buildConfigString || buildConfigString.trim() === "") {
       throw new Error("NO BUILD CONFIG PASSED IN ENV");
@@ -66,6 +70,19 @@ async function main() {
       `${platform.toLowerCase()}.version_semver`,
       null
     );
+
+    const branchName = buildConfig.branchName;
+    console.log(branchName, "branchName");
+
+    shell.cd(projectPath);
+
+    shell.exec("git stash");
+
+    shell.exec("git fetch");
+
+    shell.exec(`git checkout ${branchName}`);
+
+    shell.exec(`git pull`);
 
     if (build_ios && semver == "1.0.0" && version == "1") {
       console.log("Generating Bundle Identifiers....");
@@ -139,15 +156,12 @@ async function main() {
       "utf-8"
     );
 
-    const projectPath = path.join(currentWrkDir, "..", "ReactNativeTSProjeect");
-
     const sourceFilePath = path.join(
       currentWrkDir,
       "assets",
       "distribution.config.json"
     );
 
-    const destinationFilePath = path.join(projectPath, "devops");
     shell.cd(destinationFilePath);
     shell.cp("-f", sourceFilePath, destinationFilePath);
 
@@ -179,8 +193,34 @@ async function main() {
       const { createInternalTestFlight } = await import(
         "./utils/ios/testflight.js"
       );
-      createInternalTestFlight(bundleName);
+      await createInternalTestFlight(bundleName);
+
+      const { createExternalTestFlight } = await import(
+        "./utils/ios/testflight.js"
+      );
+
+      await createExternalTestFlight(bundleName);
     }
+
+    // !! Experimnetal submit build for review for external testing feature
+    // try {
+    //   if (build_ios) {
+    //     const signInInfo = {
+    //       contactEmail: "XXXX@apptile.com",
+    //       contactFirstName: "Launch",
+    //       contactLastName: "Apptile",
+    //       contactPhone: "XXXXXX",
+    //       demoAccountName: "XXXX@apptile.com",
+    //       demoAccountPassword: "XXXXXX",
+    //     };
+    //     const { submitBuildForExternalTesting } = await import(
+    //       "./utils/ios/testflight.js"
+    //     );
+    //     await submitBuildForExternalTesting(bundleName, signInInfo);
+    //   }
+    // } catch (err) {
+    //   console.log("Submitting for test flight failed", err);
+    // }
 
     const buildAssetsPath = path.join(projectPath, "build");
 
