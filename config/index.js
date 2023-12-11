@@ -31,7 +31,6 @@ const config = {
     },
     //contains uuid all the testers that are registered on appstoreconnect.com
     testers: [
-      "80f2c633-74d5-420b-83e1-f77fc99af839", //Archit
       "80faa659-f894-45bd-ab14-4e0f7a9e4df8", //Saif Sadiq
       "81214a50-fcee-454e-b0f1-145693bb3483", //Rohith
       "813d6fb2-876f-4767-84f9-86329311426c", //Samyam
