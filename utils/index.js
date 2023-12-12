@@ -3,6 +3,19 @@ import path from "path";
 import moment from "moment";
 import { randomInt } from "crypto";
 
+export function generateRandomPassword(length) {
+  const charset =
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let password = "";
+
+  for (let i = 0; i < length; i++) {
+    const randomIndex = Math.floor(Math.random() * charset.length);
+    password += charset.charAt(randomIndex);
+  }
+
+  return password;
+}
+
 function convertIsoToAmPm(isoString) {
   const date = moment(isoString);
   const formattedTime = date.format("DD-MM--YYYY h:mm:ss A");
