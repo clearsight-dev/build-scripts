@@ -9,61 +9,63 @@ import axios from "axios";
 export async function generateJKS(appId, appName) {
   //TODO: META-DATA FROM APPTILE SERVER FETCH
 
-  try {
-    const alias = appName.trim().split(" ").join("").toLowerCase();
-    const password = generateRandomPassword(10);
-    const currentWrkDir = path.resolve(process.cwd());
+  console.log("Generating JKS");
+  const alias = appName.trim().split(" ").join("").toLowerCase();
+  const password = generateRandomPassword(10);
+  const currentWrkDir = path.resolve(process.cwd());
+  const jksFilePath = path.join(currentWrkDir, "assets", `${alias}.jks`);
 
-    const jksFilePath = path.join(
-      currentWrkDir,
-      "..",
-      "..",
-      "assets",
-      `${alias}.jks`
+  const jksCommand = `keytool -genkey -v -keystore "${jksFilePath}" -keyalg RSA -keysize 2048 -validity 10000 -alias "${alias}" -storetype JKS -storepass "${password}" -keypass "${password}" -dname "cn=india, ou=apptile, o=apptile, c=us"`;
+
+  // CREATE JKS FILE
+  const jksCommandResult = shell.exec(jksCommand, { silent: true });
+
+  if (jksCommandResult.code == 1)
+    throw new Error("Error Creating JKS" + "\n" + jksCommandResult.stdout);
+
+  console.log(alias, "KEY-ALIAS");
+
+  console.log(password, "KEY STORE PASSWORD");
+
+  //TODO CRASH THE SCRIPT IF THE PASSWORD IS INVALID
+
+  // CHECK THE PASSWORD OF KEYSTORE IS VALID OR NOT
+  const androidStoreFileUUID = randomUUID();
+
+  const checkWetherPasswordIsTrue = shell.exec(
+    `keytool -list -keystore "${jksFilePath}" -storepass ${password}`,
+    { silent: true }
+  );
+
+  if (checkWetherPasswordIsTrue.code == 1)
+    throw new Error(
+      "Error While Checking JKS With Created Password" +
+        "\n" +
+        checkWetherPasswordIsTrue.stdout
     );
 
-    const jksCommand = `keytool -genkey -v -keystore "${jksFilePath}" -keyalg RSA -keysize 2048 -validity 10000 -alias "${alias}" -storetype JKS -storepass "${password}" -keypass "${password}" -dname "cn=india, ou=apptile, o=apptile, c=us"`;
+  const s3fileName = `${appId}/androidStoreFile/${androidStoreFileUUID}/androidStoreFile.jks`;
 
-    // CREATE JKS FILE
-    shell.exec(jksCommand, { silent: false });
+  console.log("Uploading KeyStore File TO S3...");
 
-    console.log(alias, "KEY-ALIAS");
+  const uploaderKey = await uploadToS3(
+    jksFilePath,
+    config.buildAssetsBucket,
+    s3fileName
+  );
 
-    console.log(password, "KEY STORE PASSWORD");
+  await axios.post(
+    `${config.apiBaseUrl}/build-manager/api/assets/${appId}/androidStoreFile`,
+    {
+      assetId: androidStoreFileUUID,
+      password,
+      keyAlias: alias,
+      uploaderKey,
+      fileName: "androidStoreFile.jks",
+    }
+  );
 
-    //TODO CRASH THE SCRIPT IF THE PASSWORD IS INVALID
+  console.log("Store File Key Uploaded With Uplaoder Key ", uploaderKey);
 
-    // CHECK THE PASSWORD OF KEYSTORE IS VALID OR NOT
-    const androidStoreFileUUID = randomUUID();
-
-    shell.exec(
-      `keytool -list -keystore "${jksFilePath}" -storepass ${password}`,
-      { silent: false }
-    );
-
-    const s3fileName = `${appId}/androidStoreFile/${androidStoreFileUUID}/androidStoreFile.jks`;
-
-    const uploaderKey = await uploadToS3(
-      jksFilePath,
-      config.buildAssetsBucket,
-      s3fileName
-    );
-
-    await axios.post(
-      `${config.apiBaseUrl}/build-manager/api/assets/${appId}/androidStoreFile`,
-      {
-        assetId: androidStoreFileUUID,
-        password,
-        keyAlias: alias,
-        uploaderKey,
-        fileName: "androidStoreFile.jks",
-      }
-    );
-
-    console.log("Store File Key Uploaded With Uplaoder Key ", uploaderKey);
-
-    return { uploaderKey, password, alias, filePath: jksFilePath };
-  } catch (err) {
-    throw "Error While Generating JKS" + "\n" + err.stack;
-  }
+  return { uploaderKey, password, alias, filePath: jksFilePath };
 }

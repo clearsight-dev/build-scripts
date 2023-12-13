@@ -101,8 +101,12 @@ async function main() {
       fileNamesMap["service_file_path"] = "google-services.json";
 
       if (!buildConfig.android.store_file_path) {
-        const { filePath } = await generateJKS(appId, appName);
+        const { filePath, alias, password } = await generateJKS(appId, appName);
         buildConfig.android.store_file_path = filePath;
+        buildConfig.android.key_alias = alias;
+        buildConfig.android.store_password = password;
+        buildConfig.android.key_password = password;
+        console.log(buildConfig.android);
       } else {
         requiredFiles.push("store_file_path");
       }
