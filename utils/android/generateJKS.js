@@ -10,12 +10,22 @@ export async function generateJKS(appId, appName) {
   //TODO: META-DATA FROM APPTILE SERVER FETCH
 
   console.log("Generating JKS");
+
   const alias = appName.trim().split(" ").join("").toLowerCase();
   const password = generateRandomPassword(10);
   const currentWrkDir = path.resolve(process.cwd());
+
+  const { data: metaData } = await axios.get(
+    `${config.apiBaseUrl}/api/app/6baf63f4-d842-4248-bda4-9fc40fdd49bb/build-metadata`
+  );
+
+  const country = metaData.country ?? "INDIA";
+  const countryCode = metaData.countryCode ?? "IN";
+  const organizationName = metaData.organizationName ?? "Apptile";
+
   const jksFilePath = path.join(currentWrkDir, "assets", `${alias}.jks`);
 
-  const jksCommand = `keytool -genkey -v -keystore "${jksFilePath}" -keyalg RSA -keysize 2048 -validity 10000 -alias "${alias}" -storetype JKS -storepass "${password}" -keypass "${password}" -dname "cn=india, ou=apptile, o=apptile, c=us"`;
+  const jksCommand = `keytool -genkey -v -keystore "${jksFilePath}" -keyalg RSA -keysize 2048 -validity 10000 -alias "${alias}" -storetype JKS -storepass "${password}" -keypass "${password}" -dname "cn=${country}, ou=${organizationName}, o=${organizationName}, c=${countryCode}"`;
 
   // CREATE JKS FILE
   const jksCommandResult = shell.exec(jksCommand, { silent: true });
