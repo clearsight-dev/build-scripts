@@ -16,7 +16,7 @@ export async function generateJKS(appId, appName) {
   const currentWrkDir = path.resolve(process.cwd());
 
   const { data: metaData } = await axios.get(
-    `${config.apiBaseUrl}/api/app/6baf63f4-d842-4248-bda4-9fc40fdd49bb/build-metadata`
+    `${config.apiBaseUrl}/api/app/${appId}/build-metadata`
   );
 
   const country = metaData.country ?? "INDIA";
