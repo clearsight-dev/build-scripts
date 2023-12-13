@@ -11,6 +11,7 @@ import {
   generateBuildFailureAlert,
   generateBuildSuccessAlert,
 } from "./utils/slack/index.js";
+import { generateJKS } from "./utils/android/generateJKS.js";
 async function main() {
   try {
     //TODO: HANDLE MOST COMMON ERRORS WHILE EXECUTING distribution.sh
@@ -97,9 +98,14 @@ async function main() {
     };
 
     if (build_android) {
-      requiredFiles.push("store_file_path");
-      fileNamesMap["store_file_path"] = "androidStoreFile.jks";
       fileNamesMap["service_file_path"] = "google-services.json";
+
+      if (!buildConfig.android.store_file_path) {
+        const { filePath } = await generateJKS(appId, appName);
+        buildConfig.android.store_file_path = filePath;
+      } else {
+        requiredFiles.push("store_file_path");
+      }
     }
 
     if (build_ios) {
