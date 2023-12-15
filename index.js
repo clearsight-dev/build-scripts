@@ -90,7 +90,7 @@ async function main() {
     if (build_ios) {
       shell.cd(iosTweaksPath);
 
-      shell.exec("./tweaks.sh");
+      shell.exec(`./tweaks.sh ${projectPath}`);
     }
 
     shell.cd(currentWrkDir);
