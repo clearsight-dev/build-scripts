@@ -11,7 +11,11 @@ import {
   generateBuildFailureAlert,
   generateBuildSuccessAlert,
 } from "./utils/slack/index.js";
+
+import { switchBranchOrTag, resetGITChanges } from "./utils/git/index.js";
+
 import { generateJKS } from "./utils/android/generateJKS.js";
+
 async function main() {
   try {
     //TODO: HANDLE MOST COMMON ERRORS WHILE EXECUTING distribution.sh
@@ -45,6 +49,9 @@ async function main() {
     console.log(buildConfig);
 
     const currentWrkDir = path.resolve(process.cwd());
+    const projectPath = path.join(currentWrkDir, "..", "ReactNativeTSProjeect");
+    const destinationFilePath = path.join(projectPath, "devops");
+    const iosTweaksPath = path.join(currentWrkDir, "..", "ios-build-tweaks");
 
     var appId = _.get(buildConfig, "app_id", "");
     var build_android = _.get(buildConfig, "build_android", false);
@@ -57,6 +64,8 @@ async function main() {
       null
     );
 
+    var publishOnApptile = _.get(buildConfig, "ios.publishOnApptile", false);
+
     var version = _.get(
       buildConfig,
       `${platform.toLowerCase()}.version_number`,
@@ -67,6 +76,24 @@ async function main() {
       `${platform.toLowerCase()}.version_semver`,
       null
     );
+    var branchOrTag = _.get(
+      buildConfig,
+      `${platform.toLowerCase()}.branch_name`,
+      "v0.13.0"
+    );
+    shell.cd(projectPath);
+
+    resetGITChanges();
+
+    switchBranchOrTag(branchOrTag);
+
+    if (build_ios) {
+      shell.cd(iosTweaksPath);
+
+      shell.exec(`./tweaks.sh ${projectPath}`);
+    }
+
+    shell.cd(currentWrkDir);
 
     if (build_ios && semver == "1.0.0" && version == "1") {
       console.log("Generating Bundle Identifiers....");
@@ -86,7 +113,11 @@ async function main() {
 
       if (imageNotificationBundleId)
         await createBundleCapabilities(imageNotificationBundleId);
+
+      if (publishOnApptile) buildConfig.ios.uploadToTestflight = true;
     }
+
+    console.log(buildConfig.ios);
 
     console.log("Downloading Build Assets From S3...");
 
@@ -149,19 +180,19 @@ async function main() {
       "utf-8"
     );
 
-    const projectPath = path.join(currentWrkDir, "..", "ReactNativeTSProjeect");
-
     const sourceFilePath = path.join(
       currentWrkDir,
       "assets",
       "distribution.config.json"
     );
 
-    const destinationFilePath = path.join(projectPath, "devops");
     shell.cd(destinationFilePath);
     shell.cp("-f", sourceFilePath, destinationFilePath);
 
     console.log(`Generating Build for ${platform}`);
+
+    shell.env["apiKey"] = config.appstore.credentials.apiKeyId;
+    shell.env["apiIssuerId"] = config.appstore.credentials.issuerId;
 
     const result = shell.exec("./distribution.build.sh");
 
@@ -236,6 +267,7 @@ async function main() {
     } else {
       throw Error("Web Hook Failed to Apptile Server!!");
     }
+
     process.exit(0);
   } catch (err) {
     console.log("Build Failed !!" + err.stack ?? "");
