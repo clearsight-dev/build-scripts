@@ -78,7 +78,7 @@ async function main() {
     );
     var branchOrTag = _.get(
       buildConfig,
-      `${platform.toLowerCase()}.branch_name`,
+      `${platform.toLowerCase()}.buildSourceGitHeadName`,
       "v0.13.0"
     );
     shell.cd(projectPath);
