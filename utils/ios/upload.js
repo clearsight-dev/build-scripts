@@ -40,7 +40,3 @@ async function uploadToTestflight(artefactUrl) {
     }
   }
 }
-
-uploadToTestflight(
-  "https://artefacts-demo.apptile.io/7372d278-dce5-4223-8d5d-1cae27a6b1ad/builds/ios/Nailmall%20Nail%20Supply_december_17th_2023_5_55_22.zip"
-);
