@@ -6,6 +6,7 @@ const APPSTORE_CONNECT_API = config.appstore.apiBaseUrl;
 
 export async function createInternalTestFlight(bundleIdentifier) {
   try {
+    console.log("Adding Testers to Internal Testflight");
     const { testers } = config.appstore;
     const appId = await getAppIdByBundleIdentifier(bundleIdentifier);
 

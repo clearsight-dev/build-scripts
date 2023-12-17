@@ -232,7 +232,7 @@ async function main() {
       const { createInternalTestFlight } = await import(
         "./utils/ios/testflight.js"
       );
-      createInternalTestFlight(bundleName);
+      await createInternalTestFlight(bundleName);
     }
 
     const buildAssetsPath = path.join(projectPath, "build");
