@@ -51,7 +51,7 @@ async function main() {
     const currentWrkDir = path.resolve(process.cwd());
     const projectPath = path.join(currentWrkDir, "..", "ReactNativeTSProjeect");
     const destinationFilePath = path.join(projectPath, "devops");
-    const iosTweaksPath = path.join(currentWrkDir, "..", "ios-build-tweaks");
+    const iosTweaksPath = path.join(currentWrkDir, "utils", "build-tweaks");
 
     var appId = _.get(buildConfig, "app_id", "");
     var build_android = _.get(buildConfig, "build_android", false);
@@ -92,7 +92,7 @@ async function main() {
     if (build_ios) {
       shell.cd(iosTweaksPath);
 
-      shell.exec(`./tweaks.sh ${projectPath}`);
+      shell.exec(`./tweaks.sh ${iosTweaksPath} ${projectPath}`);
     }
 
     shell.cd(currentWrkDir);

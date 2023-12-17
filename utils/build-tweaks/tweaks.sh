@@ -1,5 +1,5 @@
-project_path="$1"
-build_tweaks=$pwd
+build_tweaks="$1"
+project_path="$2"
 
 add_comments() {
     cd "$4"
