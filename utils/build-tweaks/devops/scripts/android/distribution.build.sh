@@ -1,7 +1,20 @@
 #!/bin/bash -e
 
-HOMEBREW_NO_AUTO_UPDATE=1 brew list jq &>/dev/null || brew install jq
-HOMEBREW_NO_AUTO_UPDATE=1 brew list gnu-sed &>/dev/null || brew install gnu-sed
+unameOut="$(uname -s)"
+case "${unameOut}" in
+    Linux*)     machine=Linux;;
+    Darwin*)    machine=Mac;;
+    CYGWIN*)    machine=Cygwin;;
+    MINGW*)     machine=MinGw;;
+    MSYS_NT*)   machine=Git;;
+    *)          machine="UNKNOWN:${unameOut}"
+esac
+
+if [[ $machine == "Mac" ]]
+then
+  HOMEBREW_NO_AUTO_UPDATE=1 arch -arm64 brew list jq &>/dev/null || arch -arm64 brew install jq
+  HOMEBREW_NO_AUTO_UPDATE=1 arch -arm64 brew list gnu-sed &>/dev/null || arch -arm64 brew install gnu-sed
+fi
 
 project_path=$1
 temp_dir="$project_path/temp"

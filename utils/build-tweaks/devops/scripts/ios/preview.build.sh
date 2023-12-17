@@ -1,9 +1,9 @@
 #!/bin/bash -e
 
-HOMEBREW_NO_AUTO_UPDATE=1 brew list jq &>/dev/null || brew install jq
-HOMEBREW_NO_AUTO_UPDATE=1 brew list gnu-sed &>/dev/null || brew install gnu-sed 
-HOMEBREW_NO_AUTO_UPDATE=1 brew list xcbeautify &>/dev/null || brew install xcbeautify 
-HOMEBREW_NO_AUTO_UPDATE=1 brew list libplist &>/dev/null || brew install libplist
+HOMEBREW_NO_AUTO_UPDATE=1 arch -arm64 brew list jq &>/dev/null || arch -arm64 brew install jq
+HOMEBREW_NO_AUTO_UPDATE=1 arch -arm64 brew list gnu-sed &>/dev/null || arch -arm64 brew install gnu-sed 
+HOMEBREW_NO_AUTO_UPDATE=1 arch -arm64 brew list xcbeautify &>/dev/null || arch -arm64 brew install xcbeautify 
+HOMEBREW_NO_AUTO_UPDATE=1 arch -arm64 brew list libplist &>/dev/null || arch -arm64 brew install libplist
 
 project_path=$1
 temp_dir="$project_path/temp"

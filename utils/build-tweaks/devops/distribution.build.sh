@@ -3,8 +3,21 @@ cd "$(dirname $0)/../"
 project_path=$PWD
 build_path="$PWD/build"
 
-HOMEBREW_NO_AUTO_UPDATE=1 brew list jq &>/dev/null || brew install jq
-HOMEBREW_NO_AUTO_UPDATE=1 brew list xmlstarlet &>/dev/null || brew install xmlstarlet
+unameOut="$(uname -s)"
+case "${unameOut}" in
+    Linux*)     machine=Linux;;
+    Darwin*)    machine=Mac;;
+    CYGWIN*)    machine=Cygwin;;
+    MINGW*)     machine=MinGw;;
+    MSYS_NT*)   machine=Git;;
+    *)          machine="UNKNOWN:${unameOut}"
+esac
+
+if [[ $machine == "Mac" ]]
+then
+  HOMEBREW_NO_AUTO_UPDATE=1 arch -arm64 brew list jq &>/dev/null || arch -arm64 brew install jq
+  HOMEBREW_NO_AUTO_UPDATE=1 arch -arm64 brew list xmlstarlet &>/dev/null || arch -arm64 brew install xmlstarlet
+fi
 
 export env='prod'
 build_android=$(jq -r '.build_android' "$project_path/devops/distribution.config.json")
