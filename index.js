@@ -76,11 +76,13 @@ async function main() {
       `${platform.toLowerCase()}.version_semver`,
       null
     );
+
     var branchOrTag = _.get(
       buildConfig,
       `${platform.toLowerCase()}.buildSourceGitHeadName`,
       "v0.13.0"
     );
+
     shell.cd(projectPath);
 
     resetGITChanges();
@@ -113,8 +115,12 @@ async function main() {
 
       if (imageNotificationBundleId)
         await createBundleCapabilities(imageNotificationBundleId);
+    }
 
+    if (build_ios) {
       if (publishOnApptile) buildConfig.ios.uploadToTestflight = true;
+      shell.env["apiKey"] = config.appstore.credentials.apiKeyId;
+      shell.env["apiIssuerId"] = config.appstore.credentials.issuerId;
     }
 
     console.log(buildConfig.ios);
@@ -123,7 +129,7 @@ async function main() {
 
     const requiredFiles = ["icon_path", "splash_path", "service_file_path"];
 
-    const fileNamesMap = {
+    let fileNamesMap = {
       icon_path: "icon.png",
       splash_path: "splash.png",
     };
@@ -140,6 +146,15 @@ async function main() {
         console.log(buildConfig.android);
       } else {
         requiredFiles.push("store_file_path");
+        const storeFilePathSuffix =
+          buildConfig.android.store_file_path.includes("keystore")
+            ? ".keystore"
+            : ".jks";
+
+        fileNamesMap = {
+          ...fileNamesMap,
+          store_file_path: `androidStoreFile${storeFilePathSuffix}`,
+        };
       }
     }
 
@@ -190,9 +205,6 @@ async function main() {
     shell.cp("-f", sourceFilePath, destinationFilePath);
 
     console.log(`Generating Build for ${platform}`);
-
-    shell.env["apiKey"] = config.appstore.credentials.apiKeyId;
-    shell.env["apiIssuerId"] = config.appstore.credentials.issuerId;
 
     const result = shell.exec("./distribution.build.sh");
 
