@@ -220,8 +220,7 @@ npx --yes react-native bundle --dev false --entry-file index.js --bundle-output 
 echo -e "\n\n⏳ Installing pods...\n"
 
 cd ios/
-arch -x86_64 gem install ffi --verbose
-arch -x86_64 pod install --repo-update
+arch -arm64 pod install --repo-update
 gsed -i 's/source="\$(readlink "\${source}")"/source="\$(readlink -f "\${source}")"/' ./Pods/Target\ Support\ Files/Pods-ReactNativeTSProject/Pods-ReactNativeTSProject-frameworks.sh
 cd $temp_dir/
 
