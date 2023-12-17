@@ -7,7 +7,20 @@
 source_image=$1
 output_dir=$2
 
-HOMEBREW_NO_AUTO_UPDATE=1 brew list imagemagick &>/dev/null || brew install imagemagick
+unameOut="$(uname -s)"
+case "${unameOut}" in
+    Linux*)     machine=Linux;;
+    Darwin*)    machine=Mac;;
+    CYGWIN*)    machine=Cygwin;;
+    MINGW*)     machine=MinGw;;
+    MSYS_NT*)   machine=Git;;
+    *)          machine="UNKNOWN:${unameOut}"
+esac
+
+if [[ $machine == "Mac" ]]
+then
+ HOMEBREW_NO_AUTO_UPDATE=1 arch -arm64 brew list imagemagick &>/dev/null || arch -arm64 brew install imagemagick
+fi
 command -v convert >/dev/null 2>&1 || {
     echo >&2 "I require imagemagick but it's not installed.  Aborting."
     exit 1

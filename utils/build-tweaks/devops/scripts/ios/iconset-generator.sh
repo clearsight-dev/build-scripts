@@ -7,7 +7,7 @@
 source_image=$1
 output_dir=$2
 
-HOMEBREW_NO_AUTO_UPDATE=1 brew list imagemagick &>/dev/null || brew install imagemagick
+HOMEBREW_NO_AUTO_UPDATE=1 arch -arm64 brew list imagemagick &>/dev/null || arch -arm64 brew install imagemagick
 command -v convert >/dev/null 2>&1 || {
     echo >&2 "I require imagemagick but it's not installed.  Aborting."
     exit 1
