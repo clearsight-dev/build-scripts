@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import moment from "moment";
 import { randomInt } from "crypto";
+import axios from "axios";
 
 export function generateRandomPassword(length) {
   const charset =
@@ -104,3 +105,36 @@ export function generateProjectId(projectName) {
   }
   return projectId;
 }
+
+export const downloadFile = async (fileUrl, filePath, fileName) => {
+  try {
+    // Make a GET request to the file URL
+
+    // Create the destination folder if it doesn't exist
+    if (!fs.existsSync(filePath)) {
+      fs.mkdirSync(filePath);
+    }
+
+    // Construct the destination file path
+    const destinationFilePath = path.join(filePath, fileName);
+
+    const response = await axios({
+      method: "get",
+      url: fileUrl,
+      responseType: "stream", // This ensures that the response is treated as a stream
+    });
+
+    // Create a writable stream and pipe the response data to it
+    const writer = fs.createWriteStream(destinationFilePath);
+
+    // Return a promise that resolves when the file is fully downloaded
+    return new Promise((resolve, reject) => {
+      response.data.pipe(writer);
+      writer.on("finish", resolve);
+      writer.on("error", reject);
+    });
+  } catch (error) {
+    console.error("Error downloading file:", error);
+    throw error;
+  }
+};
