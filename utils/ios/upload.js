@@ -30,13 +30,14 @@ async function uploadToTestflight(artefactUrl) {
     `xcrun altool --upload-app -f "${extractedPath}" -t ios --apiKey ${apiKeyId} --apiIssuer "${issuerId}" --verbose`
   );
   console.log(result.code, "CODE");
-  console.log(result.stderr);
   if (result.code == 1) {
     if (result.stderr.includes("ENTITY_ERROR.ATTRIBUTE.INVALID.DUPLICATE")) {
       console.log("here");
       throw new Error(
         "The Following IPA with same version and semver has been already uploaded to appstore"
       );
+    } else {
+      throw new Error("Error While Uploading To Appstore!Check Logs!!");
     }
   }
 }
