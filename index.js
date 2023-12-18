@@ -117,7 +117,7 @@ async function main() {
         await createBundleCapabilities(imageNotificationBundleId);
     }
 
-    if (build_ios) {
+    if (build_ios && version != "1" && semver != "1.0.0") {
       if (publishOnApptile) buildConfig.ios.uploadToTestflight = true;
       shell.env["apiKey"] = config.appstore.credentials.apiKeyId;
       shell.env["apiIssuerId"] = config.appstore.credentials.issuerId;
@@ -226,13 +226,6 @@ async function main() {
           "Failed Because .entitlements files containing Appgroups .Build System Doesnt Support Appgroups for now! Remove that and try again!"
         );
       }
-    }
-
-    if (build_ios && semver == "1.0.0" && version == "1") {
-      const { createInternalTestFlight } = await import(
-        "./utils/ios/testflight.js"
-      );
-      await createInternalTestFlight(bundleName);
     }
 
     const buildAssetsPath = path.join(projectPath, "build");
