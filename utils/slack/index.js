@@ -1,6 +1,8 @@
 import axios from "axios";
 import config from "../../config/index.js";
 
+//TODO: REFACTOR ALL SLACK ALERTS MAY BE IN GENRIC WAY
+
 export function generateBuildSuccessAlert(
   appname,
   platform,
@@ -112,6 +114,49 @@ export function sendFirebaseFailureAlert(appName, errors) {
         text: {
           type: "mrkdwn",
           text: `*Firebase* for *${appName.toUpperCase()}* Creation Failed 🔴`,
+        },
+      },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `*Errors :* ${"```\n" + JSON.stringify(errors) + "```\n"}\n`,
+        },
+      },
+    ],
+  });
+  return data;
+}
+
+export function generateUploadSuccessAlert(appname, platform, version, semver) {
+  const data = JSON.stringify({
+    blocks: [
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `*${appname.toUpperCase()}* ${semver}(${version}) Build for *${platform.toUpperCase()}* Has been Uploaded Succesfully 🚀`,
+        },
+      },
+    ],
+  });
+  return data;
+}
+
+export function generateUploadFailureAlert(
+  appName,
+  platform,
+  version,
+  semver,
+  errors
+) {
+  const data = JSON.stringify({
+    blocks: [
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `*UPLOAD* for *${appName.toUpperCase()}* ${semver}(${version}) for *${platform.toUpperCase()}* Failed 🔴`,
         },
       },
       {

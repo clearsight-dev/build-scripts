@@ -82,6 +82,7 @@ async function main() {
       `${platform.toLowerCase()}.buildSourceGitHeadName`,
       "v0.13.0"
     );
+    var isBuildUploaded = false;
 
     shell.cd(projectPath);
 
@@ -117,7 +118,7 @@ async function main() {
         await createBundleCapabilities(imageNotificationBundleId);
     }
 
-    if (build_ios) {
+    if (build_ios && version != "1" && semver != "1.0.0") {
       if (publishOnApptile) buildConfig.ios.uploadToTestflight = true;
       shell.env["apiKey"] = config.appstore.credentials.apiKeyId;
       shell.env["apiIssuerId"] = config.appstore.credentials.issuerId;
@@ -218,6 +219,9 @@ async function main() {
         throw new Error(
           "App needs to be Published atleast once inorder to build!"
         );
+
+      //TODO: IMPROVE THIS LOGIC. NEED TO CHECK WETHER BUILD UPLOADED OR NOT FROM LOGS
+      if (version !== "1" && semver !== "1.0.0") isBuildUploaded = true;
     }
 
     if (result.code === 0) {
@@ -226,13 +230,6 @@ async function main() {
           "Failed Because .entitlements files containing Appgroups .Build System Doesnt Support Appgroups for now! Remove that and try again!"
         );
       }
-    }
-
-    if (build_ios && semver == "1.0.0" && version == "1") {
-      const { createInternalTestFlight } = await import(
-        "./utils/ios/testflight.js"
-      );
-      await createInternalTestFlight(bundleName);
     }
 
     const buildAssetsPath = path.join(projectPath, "build");
@@ -275,6 +272,7 @@ async function main() {
       await axios.post(webhook_url, {
         success: true,
         artefactUrl,
+        uploaded: isBuildUploaded,
       });
     } else {
       throw Error("Web Hook Failed to Apptile Server!!");
