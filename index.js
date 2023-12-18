@@ -82,6 +82,7 @@ async function main() {
       `${platform.toLowerCase()}.buildSourceGitHeadName`,
       "v0.13.0"
     );
+    var isBuildUploaded = false;
 
     shell.cd(projectPath);
 
@@ -218,6 +219,9 @@ async function main() {
         throw new Error(
           "App needs to be Published atleast once inorder to build!"
         );
+
+      //TODO: IMPROVE THIS LOGIC. NEED TO CHECK WETHER BUILD UPLOADED OR NOT FROM LOGS
+      if (version !== "1" && semver !== "1.0.0") isBuildUploaded = true;
     }
 
     if (result.code === 0) {
@@ -268,6 +272,7 @@ async function main() {
       await axios.post(webhook_url, {
         success: true,
         artefactUrl,
+        uploaded: isBuildUploaded,
       });
     } else {
       throw Error("Web Hook Failed to Apptile Server!!");
