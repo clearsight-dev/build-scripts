@@ -20,10 +20,10 @@ async function uploadBuild() {
 
     var bundleName = _.get(uploadConfig, "bundle_id", null);
     var appName = _.get(uploadConfig, "app_name", null);
-    var version = _.get(uploadConfig, `version_number`, null);
-    var semver = _.get(uploadConfig, `version_semver`, null);
+    var version = _.get(uploadConfig, `version`, null);
+    var semver = _.get(uploadConfig, `semVersion`, null);
 
-    var artefactUrl = _.get(uploadConfig, "artefactURL", null);
+    var artefactUrl = _.get(uploadConfig, "artefactUrl", null);
     var webhook_url = _.get(uploadConfig, `webhook_url`, null);
 
     if (platform === "ios") {
