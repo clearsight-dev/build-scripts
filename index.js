@@ -116,7 +116,7 @@ async function main() {
         await createBundleCapabilities(imageNotificationBundleId);
     }
 
-    if (build_ios && version != "1" && semver != "1.0.0") {
+    if (build_ios && version !== "1" && semver !== "1.0.0") {
       if (publishOnApptile) buildConfig.ios.uploadToTestflight = true;
       shell.env["apiKey"] = config.appstore.credentials.apiKeyId;
       shell.env["apiIssuerId"] = config.appstore.credentials.issuerId;
@@ -217,16 +217,18 @@ async function main() {
         throw new Error(
           "App needs to be Published atleast once inorder to build!"
         );
-
-      //TODO: IMPROVE THIS LOGIC. NEED TO CHECK WETHER BUILD UPLOADED OR NOT FROM LOGS
-      if (version !== "1" && semver !== "1.0.0") isBuildUploaded = true;
     }
 
     if (result.code === 0) {
-      if (result.stderr.includes("ARCHIVE FAILED")) {
+      if (build_ios && result.stderr.includes("ARCHIVE FAILED")) {
         throw new Error(
           "Failed Because .entitlements files containing Appgroups .Build System Doesnt Support Appgroups for now! Remove that and try again!"
         );
+      }
+      //TODO: IMPROVE THIS LOGIC. NEED TO CHECK WETHER BUILD UPLOADED OR NOT FROM LOGS
+      if (build_ios && result.stdout.includes("UPLOAD SUCCEEDED")) {
+        isBuildUploaded = true;
+        console.log("TESTFLIGHT UPLOAD SUCCEDED");
       }
     }
 
