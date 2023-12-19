@@ -31,7 +31,7 @@ async function main() {
 
   *******!!!THIS SCRIPT ASSUMES ReactNativeTSProjeect is in the SAME DIRECTORY in which build-scripts are present**************
 
-*/
+  */
 
     var platform = process.env.PLATFORM;
     const buildConfigString = process.env.BUILD_CONFIG;
@@ -51,7 +51,7 @@ async function main() {
     const currentWrkDir = path.resolve(process.cwd());
     const projectPath = path.join(currentWrkDir, "..", "ReactNativeTSProjeect");
     const destinationFilePath = path.join(projectPath, "devops");
-    const iosTweaksPath = path.join(currentWrkDir, "utils", "build-tweaks");
+    const buildTweaksPath = path.join(currentWrkDir, "utils", "build-tweaks");
 
     var appId = _.get(buildConfig, "app_id", "");
     var build_android = _.get(buildConfig, "build_android", false);
@@ -86,15 +86,13 @@ async function main() {
 
     shell.cd(projectPath);
 
-    resetGITChanges();
+    resetGITChanges(branchOrTag);
 
     switchBranchOrTag(branchOrTag);
 
-    if (build_ios) {
-      shell.cd(iosTweaksPath);
+    shell.cd(buildTweaksPath);
 
-      shell.exec(`./tweaks.sh ${iosTweaksPath} ${projectPath}`);
-    }
+    shell.exec(`./tweaks.sh ${buildTweaksPath} ${projectPath}`);
 
     shell.cd(currentWrkDir);
 
