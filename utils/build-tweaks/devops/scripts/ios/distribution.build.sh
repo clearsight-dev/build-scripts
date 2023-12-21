@@ -20,6 +20,7 @@ fi
 project_path=$1
 temp_dir="$PWD/temp"
 build_path="$PWD/build"
+config_path="$project_path/devops/distribution.config.json"
 
 
 apptile_api_endpoint=$(jq -r '.apptile_api_endpoint' "$project_path/devops/distribution.config.json")
@@ -44,8 +45,22 @@ moengage_appId=$(jq -r '.moengage_appId' "$project_path/devops/distribution.conf
 moengage_datacenter=$(jq -r '.moengage_datacenter' "$project_path/devops/distribution.config.json")
 appsflyer_devKey=$(jq -r '.appsflyer_devKey' "$project_path/devops/distribution.config.json")
 appsflyer_appId=$(jq -r '.appsflyer_appId' "$project_path/devops/distribution.config.json")
+cleverTap_id=$(jq -r '.cleverTap_id' "$project_path/devops/distribution.config.json")
+cleverTap_token=$(jq -r '.cleverTap_token' "$project_path/devops/distribution.config.json")
+cleverTap_region=$(jq -r '.cleverTap_region' "$project_path/devops/distribution.config.json")
+onesignal_appId=$(jq -r '.onesignal_appId' "$project_path/devops/distribution.config.json")
 apptile_base_framework_version=$(jq -r '.version' "$project_path/package.json")
+enableSourceMap=$(jq -r '.ios.enableSourceMap' "$project_path/devops/distribution.config.json")
+sentry_sample_rate=$(jq -r '.sentry_sample_rate' "$config_path")
 uploadToTestflight=$(jq -r '.ios.uploadToTestflight' "$project_path/devops/distribution.config.json")
+
+export SENTRY_SAMPLE_RATE=$sentry_sample_rate 
+
+if [[ "$enableSourceMap" == "true" ]]
+then
+  grep -q "token=" ~/.sentryclirc || { echo -e "\033[0;31mAuth Token does not exist in ~/.sentryclirc to upload source-maps to sentry. Either disable enableSourceMap flag in distribution.config.json or else refer https://docs.sentry.io/product/cli/configuration to setup authentication\033[0m"; exit 1; }
+  npm list -g @sentry/cli >/dev/null 2>&1 || npm install -g @sentry/cli
+fi
 
 
 echo -e "\n\033[0;36m----------------------iOS Prod App Build Script (running in $PWD)----------------------\033[0m\n"
@@ -74,10 +89,18 @@ plutil -replace APPTILE_API_ENDPOINT -string $apptile_api_endpoint ./ios/ReactNa
 plutil -replace ANALYTICS_API_ENDPOINT -string $analytics_api_endpoint ./ios/ReactNativeTSProject/Info.plist
 plutil -replace APPTILE_APP_ID -string $app_id ./ios/ReactNativeTSProject/Info.plist
 plutil -replace APPTILE_IS_DISTRIBUTED_APP -string 1 ./ios/ReactNativeTSProject/Info.plist
-plutil -replace APPTILE_URL_SCHEME -string $url_scheme ./ios/ReactNativeTSProject/Info.plist
+if [[ -n "$url_scheme" && "$url_scheme" != "null" ]]; then
+  plutil -replace APPTILE_URL_SCHEME -string $url_scheme ./ios/ReactNativeTSProject/Info.plist
+else
+  plutil -replace APPTILE_URL_SCHEME -string "" ./ios/ReactNativeTSProject/Info.plist
+fi
 plutil -replace APPTILE_APP_HOST -string $app_host ./ios/ReactNativeTSProject/Info.plist
 npx --yes replace-in-file "/<string>com.apptile.apptilepreviewdemo</string>/g" "<string>$bundle_id</string>" ./ios/ReactNativeTSProject/Info.plist --isRegex
-npx --yes replace-in-file "/<string>demoapptileprvw</string>/g" "<string>$url_scheme</string>" ./ios/ReactNativeTSProject/Info.plist --isRegex
+if [[ -n "$url_scheme" && "$url_scheme" != "null" ]]; then
+  plutil -replace CFBundleURLTypes.0.CFBundleURLSchemes -json "[\"$url_scheme\"]" ./ios/ReactNativeTSProject/Info.plist
+else
+  plutil -replace CFBundleURLTypes.0.CFBundleURLSchemes -json '[]' ./ios/ReactNativeTSProject/Info.plist
+fi
 plutil -replace NSAppTransportSecurity.NSExceptionDomains -dictionary ./ios/ReactNativeTSProject/Info.plist
 plutil -insert "com\.apple\.developer\.associated-domains" -string "applinks:$app_host" -append ./ios/ReactNativeTSProject/ReactNativeTSProject.entitlements
 plutil -insert "com\.apple\.developer\.associated-domains" -string "applinks:$app_host" -append ./ios/ReactNativeTSProject/ReactNativeTSProjectRelease.entitlements
@@ -159,13 +182,13 @@ then
   echo -e "\n\n📦 Enabling FB SDK...\n"
   npx --yes replace-in-file "//\* ForFBIntegration \(Don't remove\) /g" "" ./ios/ReactNativeTSProject/AppDelegate.m --isRegex
   npx --yes replace-in-file "/ ForFBIntegrationEnd \*//g" "" ./ios/ReactNativeTSProject/AppDelegate.m --isRegex
-  plutil -insert "CFBundleURLTypes.0.CFBundleURLSchemes" -string "$fb_appId" -append ./ios/ReactNativeTSProject/info.plist
   plutil -insert "FacebookAppID" -string "$fb_appId" -append ./ios/ReactNativeTSProject/info.plist
   plutil -insert "FacebookClientToken" -string "$fb_clientToken" -append ./ios/ReactNativeTSProject/info.plist
   plutil -insert "FacebookDisplayName" -string "$app_name" -append ./ios/ReactNativeTSProject/info.plist
   plutil -insert "FacebookAutoLogAppEventsEnabled" -bool YES -append ./ios/ReactNativeTSProject/info.plist
   plutil -insert "FacebookAdvertiserIDCollectionEnabled" -bool NO -append ./ios/ReactNativeTSProject/info.plist
-  npm i --save-exact react-native-fbsdk-next@10.1.0
+  mv ./app/common/ApptileAnalytics/facebookAnalytics/index.replacement.ts ./app/common/ApptileAnalytics/facebookAnalytics/index.ts
+  npm i --save-exact react-native-fbsdk-next@12.1.0
 fi
 
 if [[ ( -n "$moengage_appId" && "$moengage_appId" != "null" ) && ( -n "$moengage_datacenter" && "$moengage_datacenter" != "null" ) ]]
@@ -209,12 +232,63 @@ then
   gsed -i '/Permission-AppTrackingTransparency/s/^ .#/ /' ./ios/Podfile
 fi
 
+if [[ -n "$onesignal_appId" && "$onesignal_appId" != "null" ]]
+then
+   echo -e "\n\n📦 Enabling OneSignal SDK...\n"
+   npx --yes replace-in-file "//\* OneSignalDependency \(Don't remove\) /g" "" ./ios/ImageNotification/NotificationService.m --isRegex
+   npx --yes replace-in-file "/ OneSignalDependencyEnd \*//g" "" ./ios/ImageNotification/NotificationService.m --isRegex
+   npx --yes replace-in-file "/\[\[FIRMessaging extensionHelper\]/g" "// [[FIRMessaging extensionHelper]" ./ios/ImageNotification/NotificationService.m --isRegex
+   npx --yes replace-in-file "/# OneSignalDependency \(Don't remove\) /g" "" ./ios/Podfile --isRegex
+   npx --yes replace-in-file "/OneSignalRequiresItToRemove \*\/ /g" "" ./ios/ReactNativeTSProject/AppDelegate.m --isRegex
+   plutil -insert OneSignal_app_groups_key -string "group.$bundle_id.notification" ./ios/NotificationContentExtension/Info.plist
+   gsed -i '/\/\/ OneSignalRequiresItToRemove/d' ./app/App.tsx
+   npx --yes replace-in-file "/messaging\(\)\.requestPermission\(\); // RemoveRequestWhenOneSignalInitialized/g" "messaging().hasPermission();" ./app/common/firebase/notificationHelper.ios.tsx --isRegex
+   mv ./app/common/ApptileAnalytics/onesignalAnalytics/index.replacement.ts ./app/common/ApptileAnalytics/onesignalAnalytics/index.ts
+   mv ./app/common/ApptileAnalytics/onesignalAnalytics/initOneSignal.replacement.ts ./app/common/ApptileAnalytics/onesignalAnalytics/initOneSignal.ts
+   npx --yes replace-in-file "/<OneSignalAppId>/g" $onesignal_appId ./app/common/ApptileAnalytics/onesignalAnalytics/initOneSignal.ts --isRegex
+   npm i --save-exact react-native-onesignal@5.0.2
+fi
+
+if [[ ( -n "$cleverTap_id" && "$cleverTap_id" != "null" ) && ( -n "$cleverTap_token" && "$cleverTap_token" != "null" ) && ( -n "$cleverTap_region" && "$cleverTap_region" != "null" ) ]]
+then
+   echo -e "\n\n📦 Enabling CleverTap SDK...\n"
+   mv ./app/common/ApptileAnalytics/cleverTapAnalytics/index.replacement.ts ./app/common/ApptileAnalytics/cleverTapAnalytics/index.ts
+   mv ./app/common/ApptileAnalytics/cleverTapAnalytics/initCleverTap.replacement.ts ./app/common/ApptileAnalytics/cleverTapAnalytics/initCleverTap.ts
+   plutil -insert "CleverTapAccountID" -string "$cleverTap_id" -append ./ios/ReactNativeTSProject/info.plist
+   plutil -insert "CleverTapToken" -string "$cleverTap_token" -append ./ios/ReactNativeTSProject/info.plist
+   plutil -insert "CleverTapRegion" -string "$cleverTap_region" -append ./ios/ReactNativeTSProject/info.plist
+   plutil -replace 'NSExtension.NSExtensionPrincipalClass' -string 'CTNotificationServiceExtension' ./ios/ImageNotification/Info.plist 
+   npx --yes replace-in-file "/// ForCleverTap \(Don't remove\) /g" "" ./ios/ReactNativeTSProject/AppDelegate.h --isRegex
+   npx --yes replace-in-file "/// ForCleverTap \(Don't remove\) /g" "" ./ios/ReactNativeTSProject/AppDelegate.m --isRegex
+   npx --yes replace-in-file "/\# ForCleverTap \(Don't remove\) /g" "" ./ios/Podfile --isRegex
+   npm i --save-exact clevertap-react-native@1.2.1
+fi
+
 
 echo -e "\n\n⏳ Building prod app bundle...\n"
 
 npm i --no-audit
 watchman watch-del-all $PWD
-npx --yes react-native bundle --dev false --entry-file index.js --bundle-output ./ios/main.bundle --assets-dest ./ios --platform ios
+
+if [[ "$enableSourceMap" == "true" ]]
+then
+    npx --yes react-native bundle --dev false --entry-file index.js --bundle-output ./ios/main.bundle --assets-dest ./ios --sourcemap-output ./ios/main.bundle.map --platform ios
+
+
+    echo -e "\nUploading Source Map to Sentry Server...."
+
+    cd "$temp_dir/ios"
+    SENTRY_RELEASE="$bundle_id@$marketing_version+$current_project_version"
+    SENTRY_DIST="$current_project_version"
+    export SENTRY_PROJECT=apptile-core-editor
+    export SENTRY_ORG=apptile-qv
+    sentry-cli releases files "$SENTRY_RELEASE" upload-sourcemaps --dist "$SENTRY_DIST" --strip-prefix "$temp_dir" main.bundle main.bundle.map
+    cd $temp_dir
+
+    echo -e "\n\033[0;32m Uploading Source Map Successful \033[0m"
+else
+    npx --yes react-native bundle --dev false --entry-file index.js --bundle-output ./ios/main.bundle --assets-dest ./ios --platform ios
+fi
 
 
 echo -e "\n\n⏳ Installing pods...\n"
@@ -227,8 +301,8 @@ cd $temp_dir/
 
 echo -e "\n\n💼 Archiving project...\n"
 
-archive_logs=$(RCT_NO_LAUNCH_PACKAGER=1 SKIP_BUNDLING=1 xcodebuild clean archive -sdk iphoneos -workspace "$temp_dir/ios/ReactNativeTSProject.xcworkspace" -scheme ReactNativeTSProject -archivePath "$temp_dir/ios/ReactNativeTSProject.xcarchive" -allowProvisioningUpdates | xcbeautify 2>&1 | tee >(cat - >&2))
 
+archive_logs=$(RCT_NO_LAUNCH_PACKAGER=1 SKIP_BUNDLING=1 xcodebuild clean archive -sdk iphoneos -workspace $temp_dir/ios/ReactNativeTSProject.xcworkspace -scheme ReactNativeTSProject -archivePath $temp_dir/ios/ReactNativeTSProject.xcarchive -allowProvisioningUpdates | xcbeautify 2>&1 | tee >(cat - >&2))
 echo "$archive_logs" | grep -q "Archive Succeeded"
 
 
@@ -266,5 +340,6 @@ echo -e "Uploading to Testflight......"
 
 
 fi
+
 
 cd $project_path && rm -rf $temp_dir/

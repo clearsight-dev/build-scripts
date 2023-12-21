@@ -19,16 +19,16 @@ fi
 project_path=$1
 temp_dir="$project_path/temp"
 build_path="$project_path/build"
-
+config_path="$project_path/devops/distribution.config.json"
 
 apptile_api_endpoint=$(jq -r '.apptile_api_endpoint' "$project_path/devops/distribution.config.json")
 analytics_api_endpoint=$(jq -r '.analytics_api_endpoint' "$project_path/devops/distribution.config.json")
 app_id=$(jq -r '.app_id' "$project_path/devops/distribution.config.json")
 app_name_og=$(jq -r '.app_name' "$project_path/devops/distribution.config.json")
-# Handle character `&`, use equivalent unicode code
+# Handle all special characters, use equivalent unicode code
 encoded_app_name=$(echo "$app_name_og" | perl -MHTML::Entities -pe 'encode_entities($_)')
 app_name=$(echo "$encoded_app_name" | sed 's/\&/\\&/g')
-echo $app_name
+echo "Using AppName $app_name"
 bundle_id=$(jq -r '.android.bundle_id' "$project_path/devops/distribution.config.json")
 version_code=$(jq -r '.android.version_number' "$project_path/devops/distribution.config.json")
 version_name=$(jq -r '.android.version_semver' "$project_path/devops/distribution.config.json")
@@ -45,11 +45,25 @@ moengage_appId=$(jq -r '.moengage_appId' "$project_path/devops/distribution.conf
 moengage_datacenter=$(jq -r '.moengage_datacenter' "$project_path/devops/distribution.config.json")
 appsflyer_devKey=$(jq -r '.appsflyer_devKey' "$project_path/devops/distribution.config.json")
 appsflyer_appId=$(jq -r '.appsflyer_appId' "$project_path/devops/distribution.config.json")
+cleverTap_id=$(jq -r '.cleverTap_id' "$project_path/devops/distribution.config.json")
+cleverTap_token=$(jq -r '.cleverTap_token' "$project_path/devops/distribution.config.json")
+cleverTap_region=$(jq -r '.cleverTap_region' "$project_path/devops/distribution.config.json")
+onesignal_appId=$(jq -r '.onesignal_appId' "$project_path/devops/distribution.config.json")
 apptile_base_framework_version=$(jq -r '.version' "$project_path/package.json")
+enableSourceMap=$(jq -r '.android.enableSourceMap' "$project_path/devops/distribution.config.json")
+sentry_sample_rate=$(jq -r '.sentry_sample_rate' "$config_path")
+
+export SENTRY_SAMPLE_RATE=$sentry_sample_rate
+
+
+if [[ "$enableSourceMap" == "true" ]]
+then
+grep -q "token=" ~/.sentryclirc || { echo -e "\033[0;31mAuth Token does not exist in ~/.sentryclirc to upload source-maps to sentry. Either disable enableSourceMap flag in distribution.config.json or else refer https://docs.sentry.io/product/cli/configuration to setup authentication\033[0m"; exit 1; }
+npm list -g @sentry/cli >/dev/null 2>&1 || npm install -g @sentry/cli
+fi
 
 
 echo -e "\n\033[0;36m----------------------Android Prod App Build Script (running in $PWD)----------------------\033[0m\n"
-
 
 
 echo -e "\n\n🧹 Cleaning temp directory...\n"
@@ -70,14 +84,22 @@ echo "{}" > .env.json
 echo -e "\n\n♻️ Replacing content in original files...\n"
 
 npx --yes replace-in-file "/android:usesCleartextTraffic=\"true\"/g" "" ./android/app/src/main/AndroidManifest.xml --isRegex
-npx --yes replace-in-file "/android:scheme=\"demoapptileprvw\"/g" "android:scheme=\"$url_scheme\"" ./android/app/src/main/AndroidManifest.xml --isRegex
+if [[ -n "$url_scheme" && "$url_scheme" != "null" ]]; then
+  npx --yes replace-in-file "/android:scheme=\"demoapptileprvw\"/g" "android:scheme=\"$url_scheme\"" ./android/app/src/main/AndroidManifest.xml --isRegex
+else
+  npx --yes replace-in-file "/<data.*android:scheme=\"demoapptileprvw\".*\/>/g" "" ./android/app/src/main/AndroidManifest.xml --isRegex
+fi
 npx --yes replace-in-file "/android:host=\"deeplink-yjm2.onrender.com\"/g" "android:host=\"$app_host\"" ./android/app/src/main/AndroidManifest.xml --isRegex
 npx --yes replace-in-file "/APPTILE_BASE_FRAMEWORK_VERSION\">.{0,64}/g" "APPTILE_BASE_FRAMEWORK_VERSION\">$apptile_base_framework_version</string>" ./android/app/src/main/res/values/strings.xml --isRegex
 npx --yes replace-in-file "/APPTILE_API_ENDPOINT\">.{0,64}/g" "APPTILE_API_ENDPOINT\">$apptile_api_endpoint</string>" ./android/app/src/main/res/values/strings.xml --isRegex
 npx --yes replace-in-file "/ANALYTICS_API_ENDPOINT\">.{0,128}/g" "ANALYTICS_API_ENDPOINT\">$analytics_api_endpoint</string>" ./android/app/src/main/res/values/strings.xml --isRegex
 npx --yes replace-in-file "/APPTILE_APP_ID\">.{0,64}/g" "APPTILE_APP_ID\">$app_id</string>" ./android/app/src/main/res/values/strings.xml --isRegex
 npx --yes replace-in-file "/APPTILE_IS_DISTRIBUTED_APP\">.{0,12}/g" "APPTILE_IS_DISTRIBUTED_APP\">1</string>" ./android/app/src/main/res/values/strings.xml --isRegex
-npx --yes replace-in-file "/APPTILE_URL_SCHEME\">.{0,32}/g" "APPTILE_URL_SCHEME\">$url_scheme</string>" ./android/app/src/main/res/values/strings.xml --isRegex
+if [[ -n "$url_scheme" && "$url_scheme" != "null" ]]; then
+  npx --yes replace-in-file "/APPTILE_URL_SCHEME\">.{0,32}/g" "APPTILE_URL_SCHEME\">$url_scheme</string>" ./android/app/src/main/res/values/strings.xml --isRegex
+else
+  npx --yes replace-in-file "/APPTILE_URL_SCHEME\">.{0,32}/g" "APPTILE_URL_SCHEME\"></string>" ./android/app/src/main/res/values/strings.xml --isRegex
+fi
 npx --yes replace-in-file "/APPTILE_APP_HOST\">.{0,64}/g" "APPTILE_APP_HOST\">$app_host</string>" ./android/app/src/main/res/values/strings.xml --isRegex
 xmlstarlet ed -P -L -s '/manifest/application/activity' -t elem -n 'intent-filter' -v '' \
     -i '/manifest/application/activity/intent-filter[last()]' -t attr -n 'android:autoVerify' -v 'true' \
@@ -153,7 +175,8 @@ then
    npx --yes replace-in-file "/facebook_client_token\">.{0,64}/g" "facebook_client_token\">$fb_clientToken</string>" ./android/app/src/main/res/values/strings.xml --isRegex
    npx --yes replace-in-file "/<!-- ForFBIntegration \(Don't remove\) /g" "" ./android/app/src/main/AndroidManifest.xml --isRegex
    npx --yes replace-in-file "/ ForFBIntegrationEnd -->/g" "" ./android/app/src/main/AndroidManifest.xml --isRegex
-   npm i --save-exact react-native-fbsdk-next@10.1.0
+   mv ./app/common/ApptileAnalytics/facebookAnalytics/index.replacement.ts ./app/common/ApptileAnalytics/facebookAnalytics/index.ts
+   npm i --save-exact react-native-fbsdk-next@12.1.0
 fi
 
 if [[ ( -n "$moengage_appId" && "$moengage_appId" != "null" ) && ( -n "$moengage_datacenter" && "$moengage_datacenter" != "null" ) ]]
@@ -186,14 +209,67 @@ then
    xmlstarlet ed -L -d '//uses-permission[@android:name="com.google.android.gms.permission.AD_ID"]/@tools:node' ./android/app/src/main/AndroidManifest.xml
 fi
 
+if [[ -n "$onesignal_appId" && "$onesignal_appId" != "null" ]]
+then
+   echo -e "\n\n📦 Enabling OneSignal SDK...\n"
+   npx --yes replace-in-file "/// OneSignalDependency \(Don't remove\) /g" "" ./android/app/build.gradle --isRegex
+   gsed -i '/\/\/ OneSignalRequiresItToRemove/d' ./app/App.tsx
+   npx --yes replace-in-file "/PermissionsAndroid\.request\('android\.permission\.POST_NOTIFICATIONS'\); // RemoveRequestWhenOneSignalInitialized/g" "PermissionsAndroid.check('android.permission.POST_NOTIFICATIONS');" ./app/common/firebase/notificationHelper.android.tsx --isRegex
+   npx --yes replace-in-file "/ === 'granted'; // RemoveGrantedWhenOneSignalInitialized/g" ";" ./app/common/firebase/notificationHelper.android.tsx --isRegex
+   mv ./app/common/ApptileAnalytics/onesignalAnalytics/index.replacement.ts ./app/common/ApptileAnalytics/onesignalAnalytics/index.ts
+   mv ./app/common/ApptileAnalytics/onesignalAnalytics/initOneSignal.replacement.ts ./app/common/ApptileAnalytics/onesignalAnalytics/initOneSignal.ts
+   npx --yes replace-in-file "/<OneSignalAppId>/g" $onesignal_appId ./app/common/ApptileAnalytics/onesignalAnalytics/initOneSignal.ts --isRegex
+   npm i --save-exact react-native-onesignal@5.0.2
+fi
+
+if [[ ( -n "$cleverTap_id" && "$cleverTap_id" != "null" ) && ( -n "$cleverTap_token" && "$cleverTap_token" != "null" ) && ( -n "$cleverTap_region" && "$cleverTap_region" != "null" ) ]]
+then
+   echo -e "\n\n📦 Enabling CleverTap SDK...\n"
+   npx --yes replace-in-file "/// CleverTapDependency \(Don't remove\) /g" "" ./android/app/build.gradle --isRegex
+   mv ./app/common/ApptileAnalytics/cleverTapAnalytics/index.replacement.ts ./app/common/ApptileAnalytics/cleverTapAnalytics/index.ts
+   mv ./app/common/ApptileAnalytics/cleverTapAnalytics/initCleverTap.replacement.ts ./app/common/ApptileAnalytics/cleverTapAnalytics/initCleverTap.ts
+   npx --yes replace-in-file "/<!-- ForCleverTap \(Don't remove\) /g" "" ./android/app/src/main/AndroidManifest.xml --isRegex
+   npx --yes replace-in-file "/ ForCleverTapEnd -->/g" "" ./android/app/src/main/AndroidManifest.xml --isRegex
+   xmlstarlet ed --inplace -u '/manifest/application/service[@android:name=".MyFirebaseMessagingService"]/@android:exported' -v 'true' ./android/app/src/main/AndroidManifest.xml
+   xmlstarlet ed --inplace -u '/manifest/application/service[@android:name=".MyFirebaseMessagingService"]/@android:name' -v 'com.clevertap.android.sdk.pushnotification.fcm.FcmMessageListenerService' ./android/app/src/main/AndroidManifest.xml
+   xmlstarlet ed --inplace -s '/manifest' -t elem -n 'uses-permission' -v '' \
+    -s '/manifest/uses-permission[not(@*)]' -t attr -n 'android:name' -v 'android.permission.ACCESS_NETWORK_STATE' ./android/app/src/main/AndroidManifest.xml
+   npx --yes replace-in-file "cleverTap_id" $cleverTap_id ./android/app/src/main/AndroidManifest.xml
+   npx --yes replace-in-file "cleverTap_token" $cleverTap_token ./android/app/src/main/AndroidManifest.xml
+   npx --yes replace-in-file "cleverTap_region" $cleverTap_region ./android/app/src/main/AndroidManifest.xml
+   npx --yes replace-in-file "//\* ForCleverTap \(Don't remove\) /g" "" ./android/app/src/main/java/org/io/apptile/ApptilePreviewDemo/MainActivity.java --isRegex
+   npx --yes replace-in-file "/ ForCleverTapEnd \*//g" "" ./android/app/src/main/java/org/io/apptile/ApptilePreviewDemo/MainActivity.java --isRegex
+   npx --yes replace-in-file "//\* ForCleverTap \(Don't remove\) /g" "" ./android/app/src/main/java/org/io/apptile/ApptilePreviewDemo/MainApplication.java --isRegex
+   npx --yes replace-in-file "/ ForCleverTapEnd \*//g" "" ./android/app/src/main/java/org/io/apptile/ApptilePreviewDemo/MainApplication.java --isRegex
+   npm i --save-exact clevertap-react-native@1.2.1
+fi
 
 echo -e "\n\n⏳ Building prod app bundle...\n"
 
 npm i --no-audit
 watchman watch-del-all $PWD
-npx --yes react-native bundle --dev false --entry-file index.js --bundle-output ./android/app/src/main/assets/index.android.bundle --assets-dest ./android/app/src/main/res/ --platform android
+
+if [[ "$enableSourceMap" == "true" ]]
+then
+   npx --yes react-native bundle --dev false --entry-file index.js --bundle-output ./android/app/src/main/assets/index.android.bundle --assets-dest ./android/app/src/main/res/ --sourcemap-output ./android/app/src/main/assets/index.android.bundle.map --platform android
 
 
+   echo -e "\n Uploading Source Map to Sentry Server...."
+
+   cd "$temp_dir/android/app/src/main/assets"
+   SENTRY_RELEASE="$bundle_id@$version_name+$version_code"
+   SENTRY_DIST=$version_code
+   export SENTRY_PROJECT=apptile-core-editor
+   export SENTRY_ORG=apptile-qv
+   sentry-cli releases files "$SENTRY_RELEASE" upload-sourcemaps --dist "$SENTRY_DIST" --strip-prefix "$temp_dir" index.android.bundle index.android.bundle.map
+   cd $temp_dir
+
+   echo -e "\n\033[0;32m Uploading Source Map Successful \033[0m"
+else
+    npx --yes react-native bundle --dev false --entry-file index.js --bundle-output ./android/app/src/main/assets/index.android.bundle --assets-dest ./android/app/src/main/res/ --platform android
+fi
+
+process.exit(1)
 echo -e "\n\n⏳ Building app...\n"
 
 export SIGNING_STORE_FILE=$(jq -r '.android.store_file_path' "$project_path/devops/distribution.config.json")
