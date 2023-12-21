@@ -269,7 +269,6 @@ else
     npx --yes react-native bundle --dev false --entry-file index.js --bundle-output ./android/app/src/main/assets/index.android.bundle --assets-dest ./android/app/src/main/res/ --platform android
 fi
 
-process.exit(1)
 echo -e "\n\n⏳ Building app...\n"
 
 export SIGNING_STORE_FILE=$(jq -r '.android.store_file_path' "$project_path/devops/distribution.config.json")
