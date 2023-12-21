@@ -15,6 +15,10 @@ import {
 import { switchBranchOrTag, resetGITChanges } from "./utils/git/index.js";
 
 import { generateJKS } from "./utils/android/generateJKS.js";
+import {
+  enablePublishFlow,
+  updateMinFrameWork,
+} from "./utils/publishFlow/index.js";
 
 async function main() {
   try {
@@ -82,6 +86,13 @@ async function main() {
       `${platform.toLowerCase()}.buildSourceGitHeadName`,
       "v0.13.0"
     );
+
+    var minFrameworkVersion = _.get(
+      buildConfig,
+      `${platform.toLowerCase()}.minFrameworkVersion`,
+      "v0.13.0"
+    );
+
     var isBuildUploaded = false;
 
     shell.cd(projectPath);
@@ -277,6 +288,10 @@ async function main() {
     } else {
       throw Error("Web Hook Failed to Apptile Server!!");
     }
+
+    await enablePublishFlow(appId);
+
+    await updateMinFrameWork(appId, minFrameworkVersion);
 
     process.exit(0);
   } catch (err) {
