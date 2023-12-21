@@ -26,10 +26,9 @@ analytics_api_endpoint=$(jq -r '.analytics_api_endpoint' "$project_path/devops/d
 app_id=$(jq -r '.app_id' "$project_path/devops/distribution.config.json")
 app_name_og=$(jq -r '.app_name' "$project_path/devops/distribution.config.json")
 # Handle character `&`, use equivalent unicode code
-app_name=$(echo $app_name_og | sed 's/\&/ &#032;&amp;&#032; /g')
-#  Handle character apostrophe(') in app name to / #039 unicode representation in xml[/']. 
-#  - Apostrophe needs to  be escaped otherwise gradle throws an error.
-app_name=$(echo $app_name_og | sed "s/'/\\\\\\&#039;/g")
+encoded_app_name=$(echo "$app_name_og" | perl -MHTML::Entities -pe 'encode_entities($_)')
+app_name=$(echo "$encoded_app_name" | sed 's/\&/\\&/g')
+echo $app_name
 bundle_id=$(jq -r '.android.bundle_id' "$project_path/devops/distribution.config.json")
 version_code=$(jq -r '.android.version_number' "$project_path/devops/distribution.config.json")
 version_name=$(jq -r '.android.version_semver' "$project_path/devops/distribution.config.json")
