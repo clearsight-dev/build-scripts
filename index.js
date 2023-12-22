@@ -127,11 +127,19 @@ async function main() {
         await createBundleCapabilities(imageNotificationBundleId);
     }
 
-    if (build_ios && version !== "1" && semver !== "1.0.0") {
-      if (publishOnApptile) buildConfig.ios.uploadToTestflight = true;
-      shell.env["apiKey"] = config.appstore.credentials.apiKeyId;
-      shell.env["apiIssuerId"] = config.appstore.credentials.issuerId;
-    }
+    // if (build_ios && version !== "1" && semver !== "1.0.0") {
+    //   buildConfig.ios.uploadToTestflight = true;
+    //   const { apiKeyId: apptileApiKey, issuerId: apptileIssuerId } =
+    //     config.appstore.credentials;
+
+    //   const { apiKey: customerApiKey, issuerId: customerIssuerId } =
+    //     buildConfig.ios;
+
+    //   shell.env["apiKey"] = publishOnApptile ? apptileApiKey : customerApiKey;
+    //   shell.env["apiIssuerId"] = publishOnApptile
+    //     ? apptileIssuerId
+    //     : customerIssuerId;
+    // }
 
     console.log(buildConfig.ios);
 
@@ -290,9 +298,6 @@ async function main() {
     }
 
     await enablePublishFlow(appId);
-
-    await updateMinFrameWork(appId, minFrameworkVersion);
-
     process.exit(0);
   } catch (err) {
     console.log("Build Failed !!" + err.stack ?? "");
