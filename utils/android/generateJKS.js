@@ -1,6 +1,7 @@
 import path from "path";
 import { generateRandomPassword } from "../index.js";
 import shell from "shelljs";
+import fs from "fs";
 import { randomUUID } from "crypto";
 import { uploadToS3 } from "../s3/index.js";
 import config from "../../config/index.js";
