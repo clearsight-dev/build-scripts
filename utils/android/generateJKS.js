@@ -18,7 +18,7 @@ export async function generateJKS(appId, appName) {
   const { data: metaData } = await axios.get(
     `${config.apiBaseUrl}/api/app/${appId}/build-metadata`
   );
-  console.log(data, "Org Meta Data");
+  console.log(metaData, "Org Meta Data");
 
   const country = metaData.country ?? "INDIA";
   const countryCode = metaData.countryCode ?? "IN";
