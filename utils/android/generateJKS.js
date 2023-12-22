@@ -18,12 +18,22 @@ export async function generateJKS(appId, appName) {
   const { data: metaData } = await axios.get(
     `${config.apiBaseUrl}/api/app/${appId}/build-metadata`
   );
+  console.log(data, "Org Meta Data");
 
   const country = metaData.country ?? "INDIA";
   const countryCode = metaData.countryCode ?? "IN";
   const organizationName = metaData.organizationName ?? "Apptile";
 
-  const jksFilePath = path.join(currentWrkDir, "assets", `${alias}.jks`);
+  const assetsPath = path.join(currentWrkDir, "assets");
+
+  if (!fs.existsSync(assetsPath)) {
+    fs.mkdirSync(assetsPath);
+    console.log(`Folder "${assetsPath}" created.`);
+  } else {
+    console.log(`Folder "${assetsPath}" already exists.`);
+  }
+
+  const jksFilePath = path.join(assetsPath, `${alias}.jks`);
 
   const jksCommand = `keytool -genkey -v -keystore "${jksFilePath}" -keyalg RSA -keysize 2048 -validity 10000 -alias "${alias}" -storetype JKS -storepass "${password}" -keypass "${password}" -dname "cn=${country}, ou=${organizationName}, o=${organizationName}, c=${countryCode}"`;
 
