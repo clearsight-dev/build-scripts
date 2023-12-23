@@ -59,21 +59,25 @@ export async function createBundleIdentifier(appName, bundleName) {
   }
 }
 
-async function getBundleIdByBundleName(bundleName) {
+export async function getBundleIdByBundleName(bundleName) {
   try {
     const response = await axios.get(
-      `${APPSTORE_CONNECT_API}/bundleIds`,
+      `${APPSTORE_CONNECT_API}/bundleIds?filter[identifier]=${bundleName}`,
       AuthHeader
     );
     const bundleIds = response.data.data;
+
     const matchingBundle = bundleIds.find(
       (bundle) => bundle.attributes.identifier === bundleName
     );
+
     if (matchingBundle) {
       const bundleId = matchingBundle.id;
+      console.log(bundleId);
       return bundleId;
     } else {
       console.log(`No bundle found with name: ${bundleName}`);
+      return;
     }
   } catch (error) {
     console.error("An error occurred:", error.message);
