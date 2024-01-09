@@ -10,8 +10,8 @@ let isError = false;
 
 try {
   const currentWrkDir = path.resolve(process.cwd());
-  const projectId = process.env.firebaseProjectId;
-  const appId = process.env.firebaseProjectId;
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  var appId = process.env.APP_ID;
   var postWebhookData = {
     success: true,
     projectId,
