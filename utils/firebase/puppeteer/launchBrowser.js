@@ -1,5 +1,4 @@
 import puppeteer from "puppeteer-extra";
-import fs from "fs";
 import config from "../../../config/index.js";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
 

@@ -171,6 +171,33 @@ export function generateUploadFailureAlert(
   return data;
 }
 
+export function generateIOSNotifAlert(appName, message, isError, errors) {
+  const blocks = [
+    {
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `*Enabling Notification* for *${appName.toUpperCase()}* for *IOS* ${
+          isError ? "Failed 🔴 " : "Success ✅ 💯 "
+        }`,
+      },
+    },
+  ];
+  if (isError) {
+    blocks.push({
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `*Errors :* ${"```\n" + JSON.stringify(errors) + "```\n"}\n`,
+      },
+    });
+  }
+  const data = JSON.stringify({
+    blocks,
+  });
+
+  return data;
+}
 export async function sendSlackAlerts(messageAlert) {
   const postConfig = {
     method: "post",

@@ -129,15 +129,17 @@ try {
     uploaderKey: iosUploaderKey,
   };
 
-  try {
-    await enableAnalyticsPipeline(projectId, projectName);
-  } catch (err) {
-    // TODO: Add Log to AnaLytics
-    console.log("Enabling Analytics Failed!! Enable it Manually!" + err);
-    postWebhookData["warnings"].push(
-      "Enabling Analytics Failed!! Enable it Manually!"
-    );
-  }
+  await delay(15000);
+
+  // try {
+  //   await enableAnalyticsPipeline(projectId, projectName);
+  // } catch (err) {
+  //   // TODO: Add Log to AnaLytics
+  //   console.log("Enabling Analytics Failed!! Enable it Manually!" + err);
+  //   postWebhookData["warnings"].push(
+  //     "Enabling Analytics Failed!! Enable it Manually!"
+  //   );
+  // }
 
   try {
     await downloadServiceJSON(projectId);
@@ -146,6 +148,13 @@ try {
       path.join(currentWrkDir, "assets", "firebaseServiceAccountKeyFile.json"),
       config.buildAssetsBucket,
       `${appId}/firebaseServiceAccountKeyFile/${serviceAccountUUID}/firebaseServiceAccountKeyFile.json`
+    );
+
+    // Upload to Push Notifier Bucket too
+    await uploadToS3(
+      path.join(currentWrkDir, "assets", "firebaseServiceAccountKeyFile.json"),
+      "prod-apptile-push-notifier-data",
+      `appsConfigFiles/${appId}/serviceAccount.json`
     );
 
     postWebhookData["serviceAccountKeyFile"] = {

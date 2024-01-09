@@ -10,6 +10,7 @@ const config = {
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   buildAssetsBucket: process.env.BUILD_ASSETS_BUCKET,
+  notifierBucket: process.env.NOTIFIER_BUCKET,
   apiBaseUrl: process.env.API_BASE_URL,
   artifactsBucket: process.env.ARTIFACTS_BUCKET,
   buildCdnUrl: process.env.BUILD_CDN_URL,
