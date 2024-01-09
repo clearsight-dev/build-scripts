@@ -70,6 +70,9 @@ async function main() {
 
     var publishOnApptile = _.get(buildConfig, "ios.publishOnApptile", false);
 
+    //   const { apiKey: customerApiKey, issuerId: customerIssuerId } =
+    //     buildConfig.ios;
+
     var version = _.get(
       buildConfig,
       `${platform.toLowerCase()}.version_number`,
@@ -106,26 +109,6 @@ async function main() {
     shell.exec(`./tweaks.sh ${buildTweaksPath} ${projectPath}`);
 
     shell.cd(currentWrkDir);
-
-    if (build_ios && semver == "1.0.0" && version == "1") {
-      console.log("Generating Bundle Identifiers....");
-      const { createBundleIdentifier } = await import(
-        "./utils/ios/bundleIds.js"
-      );
-      const { createBundleCapabilities } = await import(
-        "./utils/ios/bundleCapabilities.js"
-      );
-      const appBundleId = await createBundleIdentifier(appName, bundleName);
-      const imageNotificationBundleId = await createBundleIdentifier(
-        `${appName} Image Notification`,
-        `${bundleName}.ImageNotification`
-      );
-
-      if (appBundleId) await createBundleCapabilities(appBundleId);
-
-      if (imageNotificationBundleId)
-        await createBundleCapabilities(imageNotificationBundleId);
-    }
 
     // if (build_ios && version !== "1" && semver !== "1.0.0") {
     //   buildConfig.ios.uploadToTestflight = true;
@@ -178,6 +161,11 @@ async function main() {
 
     if (build_ios) {
       fileNamesMap["service_file_path"] = "GoogleService-Info.plist";
+
+      if (!publishOnApptile) {
+        requiredFiles.push("appStorePrivateKey");
+        fileNamesMap["appStorePrivateKey"] = "appStorePrivateKey.p8";
+      }
     }
 
     await Promise.all(
@@ -212,6 +200,67 @@ async function main() {
       buildConfigJSON,
       "utf-8"
     );
+
+    if (build_ios && !publishOnApptile) {
+      config.appstore.credentials.apiKeyId = _.get(
+        buildConfig,
+        "ios.apiKey",
+        null
+      );
+      config.appstore.credentials.issuerId = _.get(
+        buildConfig,
+        "ios.issuerId",
+        null
+      );
+      config.appstore.credentials.privateKeyPath = _.get(
+        buildConfig,
+        "ios.appStorePrivateKey",
+        null
+      );
+
+      console.log(config.appstore.credentials);
+    }
+
+    if (build_ios && semver == "1.0.0" && version == "1") {
+      console.log("Generating Bundle Identifiers....");
+      const { createBundleIdentifier } = await import(
+        "./utils/ios/bundleIds.js"
+      );
+
+      const { createBundleCapabilities } = await import(
+        "./utils/ios/bundleCapabilities.js"
+      );
+      const appBundleId = await createBundleIdentifier(appName, bundleName);
+      const imageNotificationBundleId = await createBundleIdentifier(
+        `${appName} Image Notification`,
+        `${bundleName}.ImageNotification`
+      );
+
+      const notificationContentBundleId = await createBundleIdentifier(
+        `${appName} NotificationContentExtension`,
+        `${bundleName}.NotificationContentExtension`
+      );
+
+      if (appBundleId) await createBundleCapabilities(appBundleId);
+
+      if (imageNotificationBundleId)
+        await createBundleCapabilities(imageNotificationBundleId);
+
+      if (notificationContentBundleId)
+        await createBundleCapabilities(notificationContentBundleId);
+
+      // if (!publishOnApptile) {
+      //   const { createProvisioningProfile } = await import(
+      //     "./utils/ios/provisioningProfiles/index.js"
+      //   );
+      //   await createProvisioningProfile(
+      //     appName,
+      //     appBundleId,
+      //     imageNotificationBundleId,
+      //     notificationContentBundleId
+      //   );
+      // }
+    }
 
     const sourceFilePath = path.join(
       currentWrkDir,

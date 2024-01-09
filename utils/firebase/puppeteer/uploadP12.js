@@ -1,19 +1,17 @@
-import { login } from "./googleLogin.js";
-import { successLog, log, delay, errorLog, updateTask } from "./utils.js";
-
 import { launchBrowser } from "./launchBrowser.js";
+import { delay } from "../../index.js";
 
 export async function uploadP12(projectId, p12Path, options, page) {
   try {
     const { skipLogin = false, browserLaunch = true } = options ?? {};
 
-    if (!page) {
-      let browser;
-      [browser, page] = await launchBrowser();
-    }
+    const [browser, page] = await launchBrowser();
+
     await page.goto(
       `https://console.firebase.google.com/project/${projectId}/settings/cloudmessaging`
     );
+    await delay(5000);
+
     const addKeyXpathExpression = '(//*[text()="Upload"]/ancestor::button)[2]';
     await page.waitForXPath(addKeyXpathExpression, {
       visible: true,
@@ -37,11 +35,13 @@ export async function uploadP12(projectId, p12Path, options, page) {
     SubmitUpload.click();
 
     console.log("clicked");
+    return browser;
   } catch (error) {
     console.log("Error While Uploading P12", error);
   }
 }
+
 // uploadP12(
-//   "body-mind-soul-connection7674",
-//   "/Users/yaswanth/Downloads/customer-apps/Body-Mind&Soul-Connection/assets/ios/Certificates.p12"
+//   "nailmall-8059",
+//   "/Users/yaswanth/Downloads/app-build-scripts/build-scripts/assets/g-marie-s-boutique-6571/output.p12"
 // );
