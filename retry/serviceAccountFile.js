@@ -20,19 +20,21 @@ try {
   };
   await downloadServiceJSON(projectId);
   const serviceAccountUUID = randomUUID();
+  const serviceFilePath = path.join(
+    currentWrkDir,
+    "..",
+    "assets",
+    "firebaseServiceAccountKeyFile.json"
+  );
+
   const serviceFileUploaderKey = await uploadToS3(
-    path.join(
-      currentWrkDir,
-      "..",
-      "assets",
-      "firebaseServiceAccountKeyFile.json"
-    ),
+    serviceFilePath,
     config.buildAssetsBucket,
     `${appId}/firebaseServiceAccountKeyFile/${serviceAccountUUID}/firebaseServiceAccountKeyFile.json`
   );
 
   await uploadToS3(
-    path.join(currentWrkDir, "assets", "firebaseServiceAccountKeyFile.json"),
+    serviceFilePath,
     "prod-apptile-push-notifier-data",
     `appsConfigFiles/${appId}/serviceAccount.json`
   );
